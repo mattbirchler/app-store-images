@@ -1,0 +1,136 @@
+{
+  "fill" : {
+    "automatic-gradient" : "srgb:0.39216,0.23137,0.63137,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : false,
+          "hidden" : true,
+          "image-name" : "image 1.png",
+          "name" : "image 1",
+          "position" : {
+            "scale" : 2,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "blur-material" : null,
+      "layers" : [
+        {
+          "glass" : false,
+          "image-name" : "Chip 2 1.png",
+          "name" : "Chip 2 1",
+          "position" : {
+            "scale" : 1.3,
+            "translation-in-points" : [
+              -240,
+              -90
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "glass" : false,
+          "image-name" : "• • • • • •.svg",
+          "name" : "• • • • • •",
+          "position" : {
+            "scale" : 3,
+            "translation-in-points" : [
+              -184,
+              60
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "glass" : false,
+          "image-name" : "iProcess.svg",
+          "name" : "iProcess",
+          "position" : {
+            "scale" : 2.8,
+            "translation-in-points" : [
+              -160,
+              120
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "blend-mode" : "normal",
+      "layers" : [
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "srgb:0.35686,0.86667,0.67843,1.00000",
+              "display-p3:0.40217,0.84150,0.60749,1.00000"
+            ]
+          },
+          "glass" : true,
+          "image-name" : "rectangle-wide-solid.svg",
+          "name" : "rectangle-wide-solid",
+          "position" : {
+            "scale" : 1.15,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
