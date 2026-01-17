@@ -97,7 +97,7 @@ struct SaleTab: View {
                 }
                 .padding(.horizontal, 20)
             }
-            .navigationTitle("Point of Sale")
+            .navigationTitle("iProcess")
             .refreshable {
                 await loadDailySummary()
             }

@@ -7,20 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		001 /* NMI_POSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101; };
-		002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102; };
-		003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 103; };
-		004 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104; };
-		005 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105; };
-		006 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106; };
-		007 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107; };
-		008 /* NewSaleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108; };
-		009 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109; };
-		010 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110; };
-		011 /* NMIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111; };
-		012 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112; };
-		013 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113; };
-		014 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114; };
+		001 /* NMI_POSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101 /* NMI_POSApp.swift */; };
+		002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102 /* ContentView.swift */; };
+		003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 103 /* Assets.xcassets */; };
+		004 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104 /* LoginView.swift */; };
+		005 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105 /* WelcomeView.swift */; };
+		006 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106 /* OnboardingView.swift */; };
+		007 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107 /* MainView.swift */; };
+		008 /* NewSaleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108 /* NewSaleView.swift */; };
+		009 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109 /* HistoryView.swift */; };
+		010 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110 /* SettingsView.swift */; };
+		011 /* NMIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111 /* NMIService.swift */; };
+		012 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112 /* Models.swift */; };
+		013 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113 /* AppState.swift */; };
+		014 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114 /* Extensions.swift */; };
+		C9A366092F1BB38A00E6B404 /* iProcess Icon 2026.icon in Resources */ = {isa = PBXBuildFile; fileRef = C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +40,7 @@
 		112 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		113 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		114 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "iProcess Icon 2026.icon"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +73,7 @@
 				305 /* Services */,
 				306 /* Extensions */,
 				103 /* Assets.xcassets */,
+				C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */,
 			);
 			path = "NMI-POS";
 			sourceTree = "<group>";
@@ -126,7 +129,7 @@
 /* Begin PBXNativeTarget section */
 		400 /* NMI-POS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 500;
+			buildConfigurationList = 500 /* Build configuration list for PBXNativeTarget "NMI-POS" */;
 			buildPhases = (
 				401 /* Sources */,
 				200 /* Frameworks */,
@@ -156,7 +159,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 601;
+			buildConfigurationList = 601 /* Build configuration list for PBXProject "NMI-POS" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -180,6 +183,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				003 /* Assets.xcassets in Resources */,
+				C9A366092F1BB38A00E6B404 /* iProcess Icon 2026.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,13 +335,15 @@
 		702 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iProcess Icon 2026";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = ZPU7B69KH3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = iProcess;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -359,13 +365,15 @@
 		703 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "iProcess Icon 2026";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = ZPU7B69KH3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = iProcess;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
