@@ -378,87 +378,141 @@ struct NewSaleView: View {
     // MARK: - Result View
 
     private var resultView: some View {
-        VStack(spacing: 24) {
-            Spacer()
+        ZStack(alignment: .topTrailing) {
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
 
-            if let result = transactionResult {
-                if result.isSuccess {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(.green)
-
-                    Text("Payment Approved")
-                        .font(.title)
-                        .fontWeight(.bold)
-
-                    VStack(spacing: 8) {
-                        Text("Transaction ID")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        Text(result.transactionId ?? "N/A")
-                            .font(.headline)
-                            .monospaced()
-                    }
-
-                    if let authCode = result.authCode {
-                        VStack(spacing: 8) {
-                            Text("Auth Code")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-
-                            Text(authCode)
-                                .font(.headline)
-                                .monospaced()
+            ScrollView {
+                VStack(spacing: 0) {
+                    if let result = transactionResult {
+                        if result.isSuccess {
+                            successReceiptView(result)
+                        } else {
+                            declinedView(result)
                         }
                     }
-
-                    VStack(spacing: 4) {
-                        Text("Amount Charged")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        Text(totalAmount.formatted(as: appState.settings.currency))
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.accent)
-                    }
-                    .padding(.top)
-                } else {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(.red)
-
-                    Text("Payment Declined")
-                        .font(.title)
-                        .fontWeight(.bold)
-
-                    Text(result.responseText)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
                 }
+                .padding(.top, 60)
             }
 
-            Spacer()
+            // Close button
+            Button {
+                onComplete()
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 32, height: 32)
+                    .background(Color(.systemGray5))
+                    .clipShape(Circle())
+            }
+            .padding(.trailing, 20)
+            .padding(.top, 12)
+        }
+        .navigationBarBackButtonHidden(true)
+    }
 
-            VStack(spacing: 12) {
-                if transactionResult?.isSuccess == true {
-                    Button {
-                        shareReceipt()
-                    } label: {
-                        HStack {
-                            Image(systemName: "square.and.arrow.up")
-                            Text("Share Receipt")
-                        }
+    private func successReceiptView(_ result: NMITransactionResponse) -> some View {
+        VStack(spacing: 24) {
+            // Receipt icon with checkmark badge
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.green.opacity(0.15))
+                    .frame(width: 70, height: 80)
+
+                Image(systemName: "doc.text.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(.green)
+
+                // Checkmark badge
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.green)
+                    .background(Circle().fill(Color(.systemGroupedBackground)).padding(-2))
+                    .offset(x: 28, y: 28)
+            }
+
+            // Title
+            Text("Payment Success!")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+
+            // Receipt card
+            VStack(spacing: 0) {
+                // Transaction details header
+                HStack {
+                    Text("Transaction details")
+                        .font(.subheadline)
                         .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.systemGray5))
-                        .foregroundStyle(.primary)
-                        .cornerRadius(12)
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
+
+                // Details rows
+                VStack(spacing: 14) {
+                    receiptDetailRow("Customer", value: "\(firstName) \(lastName)")
+                    receiptDetailRow("Amount", value: amount.formatted(as: appState.settings.currency))
+
+                    if taxAmount > 0 {
+                        receiptDetailRow("Tax", value: taxAmount.formatted(as: appState.settings.currency))
                     }
+
+                    receiptDetailRow("Method", value: detectCardType(cardNumberDigits))
+                    receiptDetailRow("Card", value: "•••• •••• •••• \(String(cardNumberDigits.suffix(4)))")
+                    receiptDetailRow("Date", value: Date().formattedDateTime)
+                    receiptDetailRow("Transaction ID", value: result.transactionId ?? "N/A")
+
+                    if let authCode = result.authCode {
+                        receiptDetailRow("Auth Code", value: authCode)
+                    }
+                }
+                .padding(.horizontal, 20)
+
+                // Divider
+                Rectangle()
+                    .fill(Color(.systemGray4))
+                    .frame(height: 1)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+
+                // Total row
+                HStack {
+                    Text("Total")
+                        .font(.headline)
+                    Spacer()
+                    Text(totalAmount.formatted(as: appState.settings.currency))
+                        .font(.title2)
+                        .fontWeight(.bold)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+
+                // Zigzag edge
+                ZigzagEdge()
+                    .fill(Color(.systemGroupedBackground))
+                    .frame(height: 12)
+            }
+            .background(Color(.systemBackground))
+            .padding(.horizontal, 20)
+
+            // Buttons
+            VStack(spacing: 12) {
+                Button {
+                    shareReceipt()
+                } label: {
+                    HStack {
+                        Image(systemName: "square.and.arrow.down")
+                        Text("Share Receipt")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color(.systemBackground))
+                    .foregroundStyle(.primary)
+                    .cornerRadius(12)
                 }
 
                 Button {
@@ -466,17 +520,70 @@ struct NewSaleView: View {
                     dismiss()
                 } label: {
                     Text("Done")
+                        .font(.subheadline)
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
-                        .padding()
+                        .padding(.vertical, 14)
                         .background(Color.accentColor)
                         .foregroundStyle(.white)
                         .cornerRadius(12)
                 }
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 32)
         }
-        .navigationBarBackButtonHidden(true)
+    }
+
+    private func declinedView(_ result: NMITransactionResponse) -> some View {
+        VStack(spacing: 24) {
+            Spacer()
+                .frame(height: 60)
+
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 80))
+                .foregroundStyle(.red)
+
+            Text("Payment Declined")
+                .font(.title)
+                .fontWeight(.bold)
+
+            Text(result.responseText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            Spacer()
+
+            Button {
+                showResult = false
+                errorMessage = result.responseText
+            } label: {
+                Text("Try Again")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.accentColor)
+                    .foregroundStyle(.white)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
+        }
+    }
+
+    private func receiptDetailRow(_ label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .multilineTextAlignment(.trailing)
+        }
     }
 
     // MARK: - Card Number Formatting
@@ -594,7 +701,34 @@ struct NewSaleView: View {
     }
 }
 
-// MARK: - Receipt View
+// MARK: - Zigzag Edge Shape
+
+struct ZigzagEdge: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let zigzagHeight: CGFloat = rect.height
+        let zigzagWidth: CGFloat = 12
+
+        path.move(to: CGPoint(x: 0, y: 0))
+
+        var x: CGFloat = 0
+        var goingUp = true
+
+        while x < rect.width {
+            x += zigzagWidth / 2
+            let y = goingUp ? zigzagHeight : 0
+            path.addLine(to: CGPoint(x: min(x, rect.width), y: y))
+            goingUp.toggle()
+        }
+
+        path.addLine(to: CGPoint(x: rect.width, y: 0))
+        path.closeSubpath()
+
+        return path
+    }
+}
+
+// MARK: - Receipt View (for sharing)
 
 struct ReceiptView: View {
     let transactionId: String
@@ -611,64 +745,97 @@ struct ReceiptView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            VStack(spacing: 12) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 50))
-                    .foregroundStyle(.green)
+            // Header area
+            VStack(spacing: 16) {
+                // Receipt icon with checkmark badge
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.green.opacity(0.15))
+                        .frame(width: 60, height: 70)
 
-                Text("Payment Successful")
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 30))
+                        .foregroundStyle(.green)
+
+                    // Checkmark badge
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.green)
+                        .background(Circle().fill(Color(.systemGray6)).padding(-2))
+                        .offset(x: 24, y: 24)
+                }
+
+                Text("Payment Success!")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
 
                 Text(merchantName)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 32)
+            .padding(.top, 32)
+            .padding(.bottom, 24)
 
-            // Divider
-            Rectangle()
-                .fill(Color(.systemGray4))
-                .frame(height: 1)
-                .padding(.horizontal, 24)
-
-            // Amount
-            VStack(spacing: 8) {
-                Text("Amount")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                Text(amount.formatted(as: currency))
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
-            }
-            .padding(.vertical, 24)
-
-            // Details
-            VStack(spacing: 16) {
-                if subtotal != amount {
-                    receiptRow("Subtotal", value: subtotal.formatted(as: currency))
-                    receiptRow("Tax", value: tax.formatted(as: currency))
+            // Receipt card
+            VStack(spacing: 0) {
+                // Transaction details header
+                HStack {
+                    Text("Transaction details")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Spacer()
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
 
-                receiptRow("Payment Method", value: "\(cardType) ••••\(lastFour)")
-                receiptRow("Customer", value: customerName)
-                receiptRow("Date", value: date.formattedDateTime)
-                receiptRow("Transaction ID", value: transactionId)
+                // Details rows
+                VStack(spacing: 12) {
+                    shareReceiptRow("Customer", value: customerName)
+                    shareReceiptRow("Amount", value: subtotal.formatted(as: currency))
 
-                if let authCode = authCode {
-                    receiptRow("Auth Code", value: authCode)
+                    if tax > 0 {
+                        shareReceiptRow("Tax", value: tax.formatted(as: currency))
+                    }
+
+                    shareReceiptRow("Method", value: cardType)
+                    shareReceiptRow("Card", value: "•••• •••• •••• \(lastFour)")
+                    shareReceiptRow("Date", value: date.formattedDateTime)
+                    shareReceiptRow("Transaction ID", value: transactionId)
+
+                    if let authCode = authCode {
+                        shareReceiptRow("Auth Code", value: authCode)
+                    }
                 }
+                .padding(.horizontal, 20)
+
+                // Divider
+                Rectangle()
+                    .fill(Color(.systemGray4))
+                    .frame(height: 1)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+
+                // Total row
+                HStack {
+                    Text("Total")
+                        .font(.headline)
+                    Spacer()
+                    Text(amount.formatted(as: currency))
+                        .font(.title2)
+                        .fontWeight(.bold)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+
+                // Zigzag edge
+                ZigzagEdge()
+                    .fill(Color(.systemGray6))
+                    .frame(height: 12)
             }
+            .background(Color(.systemBackground))
             .padding(.horizontal, 24)
-            .padding(.vertical, 16)
 
             // Footer
-            Rectangle()
-                .fill(Color(.systemGray4))
-                .frame(height: 1)
-                .padding(.horizontal, 24)
-
             VStack(spacing: 8) {
                 Text("Thank you for your payment")
                     .font(.subheadline)
@@ -680,15 +847,11 @@ struct ReceiptView: View {
             }
             .padding(.vertical, 24)
         }
-        .frame(width: 350)
-        .background(Color(.systemBackground))
-        .cornerRadius(20)
-        .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
-        .padding(24)
+        .frame(width: 380)
         .background(Color(.systemGray6))
     }
 
-    private func receiptRow(_ label: String, value: String) -> some View {
+    private func shareReceiptRow(_ label: String, value: String) -> some View {
         HStack {
             Text(label)
                 .font(.subheadline)
