@@ -103,10 +103,16 @@ struct HistoryView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(transactions) { transaction in
-                    TransactionRow(transaction: transaction, currency: appState.settings.currency)
+                    NavigationLink(value: transaction) {
+                        TransactionRow(transaction: transaction, currency: appState.settings.currency)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding()
+        }
+        .navigationDestination(for: Transaction.self) { transaction in
+            TransactionDetailView(transactionId: transaction.transactionId)
         }
     }
 

@@ -22,6 +22,7 @@
 		013 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113 /* AppState.swift */; };
 		014 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114 /* Extensions.swift */; };
 		C9A366092F1BB38A00E6B404 /* iProcess Icon 2026.icon in Resources */ = {isa = PBXBuildFile; fileRef = C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */; };
+		C9A3660B2F1BB77100E6B404 /* TransactionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A3660A2F1BB77100E6B404 /* TransactionDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 		113 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		114 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "iProcess Icon 2026.icon"; sourceTree = "<group>"; };
+		C9A3660A2F1BB77100E6B404 /* TransactionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +98,7 @@
 				108 /* NewSaleView.swift */,
 				109 /* HistoryView.swift */,
 				110 /* SettingsView.swift */,
+				C9A3660A2F1BB77100E6B404 /* TransactionDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -204,6 +207,7 @@
 				009 /* HistoryView.swift in Sources */,
 				010 /* SettingsView.swift in Sources */,
 				011 /* NMIService.swift in Sources */,
+				C9A3660B2F1BB77100E6B404 /* TransactionDetailView.swift in Sources */,
 				012 /* Models.swift in Sources */,
 				013 /* AppState.swift in Sources */,
 				014 /* Extensions.swift in Sources */,

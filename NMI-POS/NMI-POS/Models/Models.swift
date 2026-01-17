@@ -86,7 +86,7 @@ enum Currency: String, Codable, CaseIterable, Identifiable {
 
 // MARK: - Transaction
 
-struct Transaction: Identifiable, Codable, Equatable {
+struct Transaction: Identifiable, Codable, Equatable, Hashable {
     let id: String
     let transactionId: String
     let amount: Double
@@ -190,4 +190,143 @@ struct DailySummary: Equatable {
     }
 
     static let empty = DailySummary(totalRevenue: 0, transactionCount: 0, date: Date())
+}
+
+// MARK: - Transaction Detail
+
+struct TransactionDetail: Equatable {
+    // Basic info
+    let transactionId: String
+    let transactionType: String
+    let condition: String
+    let orderId: String
+    let authorizationCode: String
+
+    // Billing
+    let firstName: String
+    let lastName: String
+    let company: String
+    let address1: String
+    let address2: String
+    let city: String
+    let state: String
+    let postalCode: String
+    let country: String
+    let email: String
+    let phone: String
+
+    // Shipping
+    let shippingFirstName: String
+    let shippingLastName: String
+    let shippingCompany: String
+    let shippingAddress1: String
+    let shippingAddress2: String
+    let shippingCity: String
+    let shippingState: String
+    let shippingPostalCode: String
+    let shippingCountry: String
+
+    // Card info
+    let ccNumber: String
+    let ccExp: String
+    let ccType: String
+    let ccBin: String
+    let avsResponse: String
+    let cscResponse: String
+
+    // Amounts
+    let amount: Double
+    let tax: Double
+    let shipping: Double
+    let tip: Double
+    let surcharge: Double
+    let currency: String
+
+    // Related data
+    let products: [TransactionProduct]
+    let actions: [TransactionAction]
+
+    var fullName: String {
+        "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+    }
+
+    var shippingFullName: String {
+        "\(shippingFirstName) \(shippingLastName)".trimmingCharacters(in: .whitespaces)
+    }
+
+    var hasShippingAddress: Bool {
+        !shippingAddress1.isEmpty || !shippingCity.isEmpty
+    }
+
+    var hasBillingAddress: Bool {
+        !address1.isEmpty || !city.isEmpty
+    }
+
+    var status: TransactionStatus {
+        switch condition.lowercased() {
+        case "complete", "completed", "pendingsettlement", "pending_settlement":
+            return .approved
+        case "declined", "failed":
+            return .declined
+        case "pending":
+            return .pending
+        case "voided", "void":
+            return .voided
+        case "refunded", "refund":
+            return .refunded
+        default:
+            return .pending
+        }
+    }
+
+    var transactionDate: Date? {
+        actions.first?.date
+    }
+}
+
+struct TransactionProduct: Equatable, Identifiable {
+    let id: String
+    let sku: String
+    let quantity: Double
+    let description: String
+    let amount: Double
+
+    init(id: String = UUID().uuidString, sku: String, quantity: Double, description: String, amount: Double) {
+        self.id = id
+        self.sku = sku
+        self.quantity = quantity
+        self.description = description
+        self.amount = amount
+    }
+}
+
+struct TransactionAction: Equatable, Identifiable {
+    let id: String
+    let actionType: String
+    let amount: Double
+    let date: Date
+    let success: Bool
+    let responseText: String
+
+    init(id: String = UUID().uuidString, actionType: String, amount: Double, date: Date, success: Bool, responseText: String) {
+        self.id = id
+        self.actionType = actionType
+        self.amount = amount
+        self.date = date
+        self.success = success
+        self.responseText = responseText
+    }
+
+    var displayActionType: String {
+        switch actionType.lowercased() {
+        case "sale": return "Sale"
+        case "auth": return "Authorization"
+        case "capture": return "Capture"
+        case "void": return "Void"
+        case "refund": return "Refund"
+        case "credit": return "Credit"
+        case "settle": return "Settlement"
+        default: return actionType.capitalized
+        }
+    }
 }
