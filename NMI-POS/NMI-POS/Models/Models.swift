@@ -383,3 +383,76 @@ struct TransactionAction: Equatable, Identifiable {
         }
     }
 }
+
+// MARK: - Customer Vault
+
+struct VaultCustomer: Identifiable, Codable, Equatable {
+    let id: String
+    let customerVaultId: String
+    let firstName: String
+    let lastName: String
+    let email: String
+    let phone: String
+    let company: String
+    let address1: String
+    let city: String
+    let state: String
+    let postalCode: String
+    let country: String
+    let ccNumber: String      // Masked, e.g., "4xxxxxxxxxxx1111"
+    let ccExp: String         // e.g., "1225"
+    let ccType: String        // e.g., "visa"
+    let ccBin: String
+    let created: Date?
+    let updated: Date?
+
+    var fullName: String {
+        "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+    }
+
+    var displayName: String {
+        if !fullName.isEmpty {
+            return fullName
+        } else if !company.isEmpty {
+            return company
+        } else if !email.isEmpty {
+            return email
+        }
+        return "Customer"
+    }
+
+    var lastFour: String {
+        String(ccNumber.suffix(4))
+    }
+
+    var formattedExpiration: String {
+        guard ccExp.count == 4 else { return ccExp }
+        let month = String(ccExp.prefix(2))
+        let year = String(ccExp.suffix(2))
+        return "\(month)/\(year)"
+    }
+
+    var cardTypeDisplayName: String {
+        switch ccType.lowercased() {
+        case "visa": return "Visa"
+        case "mastercard", "mc": return "Mastercard"
+        case "amex", "americanexpress", "american express": return "Amex"
+        case "discover": return "Discover"
+        case "diners", "dinersclub": return "Diners Club"
+        case "jcb": return "JCB"
+        default: return ccType.capitalized
+        }
+    }
+}
+
+struct VaultSaleRequest {
+    let customerVaultId: String
+    let billingId: String?    // For customers with multiple cards
+    let amount: Double
+    let tax: Double
+    let tip: Double
+
+    var total: Double {
+        amount + tax + tip
+    }
+}

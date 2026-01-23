@@ -20,7 +20,29 @@ struct NewSaleView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
 
+    // Vault mode support
+    let prefilledCustomer: VaultCustomer?
     let onComplete: () -> Void
+
+    // Convenience initializer for non-vault mode
+    init(onComplete: @escaping () -> Void) {
+        self.prefilledCustomer = nil
+        self.onComplete = onComplete
+    }
+
+    // Initializer for vault mode
+    init(prefilledCustomer: VaultCustomer, onComplete: @escaping () -> Void) {
+        self.prefilledCustomer = prefilledCustomer
+        self.onComplete = onComplete
+    }
+
+    var isVaultMode: Bool {
+        prefilledCustomer != nil || selectedVaultCustomer != nil
+    }
+
+    var activeVaultCustomer: VaultCustomer? {
+        prefilledCustomer ?? selectedVaultCustomer
+    }
 
     // Focus state
     @FocusState private var focusedField: SaleFormField?
@@ -63,6 +85,10 @@ struct NewSaleView: View {
     // Tip state
     @State private var tipAmount: Double = 0
 
+    // Vault customer selection state
+    @State private var showCustomerVault = false
+    @State private var selectedVaultCustomer: VaultCustomer?
+
     private var amount: Double {
         Double(amountString) ?? 0
     }
@@ -104,11 +130,16 @@ struct NewSaleView: View {
     }
 
     private var isFormValid: Bool {
-        amount > 0 &&
-        cardNumberDigits.isValidCardNumber &&
-        expirationMonth.count == 2 &&
-        expirationYear.count == 2 &&
-        cvv.isValidCVV
+        if isVaultMode {
+            // In vault mode, only amount is required (card is already stored)
+            return amount > 0
+        } else {
+            return amount > 0 &&
+            cardNumberDigits.isValidCardNumber &&
+            expirationMonth.count == 2 &&
+            expirationYear.count == 2 &&
+            cvv.isValidCVV
+        }
     }
 
     var body: some View {
@@ -266,128 +297,176 @@ struct NewSaleView: View {
 
             // Card Section
             Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("Card Number")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                if let customer = activeVaultCustomer {
+                    // Vault mode: show read-only card display
+                    HStack(spacing: 12) {
+                        Image(systemName: "creditcard.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(.accent)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(customer.cardTypeDisplayName) \u{2022}\u{2022}\u{2022}\u{2022} \(customer.lastFour)")
+                                .font(.headline)
+                            Text("Expires \(customer.formattedExpiration)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
 
                         Spacer()
 
-                        // Show card type status when surcharging is enabled
-                        if appState.settings.surchargeEnabled {
-                            if isCheckingCardType {
-                                HStack(spacing: 4) {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                    Text("Checking...")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            } else if let fundingType = cardFundingType {
-                                HStack(spacing: 4) {
-                                    Image(systemName: fundingType.isCreditCard ? "creditcard.fill" : "creditcard")
-                                        .font(.caption)
-                                    Text(fundingType.displayName)
-                                        .font(.caption)
-                                }
-                                .foregroundStyle(fundingType.isCreditCard ? .orange : .secondary)
+                        // Allow changing vault customer if not prefilled
+                        if prefilledCustomer == nil {
+                            Button {
+                                selectedVaultCustomer = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(.secondary)
                             }
+                        } else {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.green)
                         }
                     }
-                    TextField("4111 1111 1111 1111", text: $cardNumber)
-                        .keyboardType(.numberPad)
-                        .textContentType(.creditCardNumber)
-                        .focused($focusedField, equals: .cardNumber)
-                        .onChange(of: cardNumber) { oldValue, newValue in
-                            cardNumber = formatCardNumber(newValue)
-                            // Reset card type when card number changes significantly
-                            let oldDigits = oldValue.filter { $0.isNumber }
-                            let newDigits = newValue.filter { $0.isNumber }
-                            if oldDigits.prefix(6) != newDigits.prefix(6) {
-                                cardFundingType = nil
+                    .padding(.vertical, 4)
+                } else {
+                    // Button to select vault customer
+                    Button {
+                        showCustomerVault = true
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "person.crop.rectangle.stack")
+                                .font(.system(size: 16))
+                            Text("Charge Existing Customer")
+                                .font(.subheadline)
+                        }
+                        .foregroundStyle(.accent)
+                    }
+                    // Normal mode: show card input fields
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Card Number")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            Spacer()
+
+                            // Show card type status when surcharging is enabled
+                            if appState.settings.surchargeEnabled {
+                                if isCheckingCardType {
+                                    HStack(spacing: 4) {
+                                        ProgressView()
+                                            .scaleEffect(0.7)
+                                        Text("Checking...")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                } else if let fundingType = cardFundingType {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: fundingType.isCreditCard ? "creditcard.fill" : "creditcard")
+                                            .font(.caption)
+                                        Text(fundingType.displayName)
+                                            .font(.caption)
+                                    }
+                                    .foregroundStyle(fundingType.isCreditCard ? .orange : .secondary)
+                                }
                             }
                         }
-                }
-
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Exp Month")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("MM", text: $expirationMonth)
+                        TextField("4111 1111 1111 1111", text: $cardNumber)
                             .keyboardType(.numberPad)
-                            .frame(width: 60)
-                            .focused($focusedField, equals: .expirationMonth)
-                            .onChange(of: expirationMonth) { oldValue, newValue in
-                                // Only allow digits
-                                let filtered = newValue.filter { $0.isNumber }
-                                if filtered.count <= 2 {
-                                    expirationMonth = filtered
-                                } else {
-                                    expirationMonth = String(filtered.prefix(2))
-                                }
-                                // Auto-advance to year when 2 digits entered
-                                if expirationMonth.count == 2 {
-                                    focusedField = .expirationYear
+                            .textContentType(.creditCardNumber)
+                            .focused($focusedField, equals: .cardNumber)
+                            .onChange(of: cardNumber) { oldValue, newValue in
+                                cardNumber = formatCardNumber(newValue)
+                                // Reset card type when card number changes significantly
+                                let oldDigits = oldValue.filter { $0.isNumber }
+                                let newDigits = newValue.filter { $0.isNumber }
+                                if oldDigits.prefix(6) != newDigits.prefix(6) {
+                                    cardFundingType = nil
                                 }
                             }
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Exp Year")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("YY", text: $expirationYear)
-                            .keyboardType(.numberPad)
-                            .frame(width: 60)
-                            .focused($focusedField, equals: .expirationYear)
-                            .onChange(of: expirationYear) { oldValue, newValue in
-                                // Only allow digits
-                                let filtered = newValue.filter { $0.isNumber }
-                                if filtered.count <= 2 {
-                                    expirationYear = filtered
-                                } else {
-                                    expirationYear = String(filtered.prefix(2))
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Exp Month")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("MM", text: $expirationMonth)
+                                .keyboardType(.numberPad)
+                                .frame(width: 60)
+                                .focused($focusedField, equals: .expirationMonth)
+                                .onChange(of: expirationMonth) { oldValue, newValue in
+                                    // Only allow digits
+                                    let filtered = newValue.filter { $0.isNumber }
+                                    if filtered.count <= 2 {
+                                        expirationMonth = filtered
+                                    } else {
+                                        expirationMonth = String(filtered.prefix(2))
+                                    }
+                                    // Auto-advance to year when 2 digits entered
+                                    if expirationMonth.count == 2 {
+                                        focusedField = .expirationYear
+                                    }
                                 }
-                                // Auto-advance to CVV when 2 digits entered
-                                if expirationYear.count == 2 {
-                                    focusedField = .cvv
-                                }
-                            }
-                    }
+                        }
 
-                    Spacer()
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("CVV")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        SecureField("123", text: $cvv)
-                            .keyboardType(.numberPad)
-                            .frame(width: 60)
-                            .focused($focusedField, equals: .cvv)
-                            .onChange(of: cvv) { oldValue, newValue in
-                                // Only allow digits, max 4
-                                let filtered = newValue.filter { $0.isNumber }
-                                if filtered.count <= 4 {
-                                    cvv = filtered
-                                } else {
-                                    cvv = String(filtered.prefix(4))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Exp Year")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("YY", text: $expirationYear)
+                                .keyboardType(.numberPad)
+                                .frame(width: 60)
+                                .focused($focusedField, equals: .expirationYear)
+                                .onChange(of: expirationYear) { oldValue, newValue in
+                                    // Only allow digits
+                                    let filtered = newValue.filter { $0.isNumber }
+                                    if filtered.count <= 2 {
+                                        expirationYear = filtered
+                                    } else {
+                                        expirationYear = String(filtered.prefix(2))
+                                    }
+                                    // Auto-advance to CVV when 2 digits entered
+                                    if expirationYear.count == 2 {
+                                        focusedField = .cvv
+                                    }
                                 }
+                        }
 
-                                // Auto-dismiss keyboard when CVV is complete
-                                // Amex (starts with 3) has 4-digit CVV, others have 3-digit
-                                let isAmex = cardNumberDigits.hasPrefix("3")
-                                let requiredLength = isAmex ? 4 : 3
-                                if filtered.count == requiredLength {
-                                    focusedField = nil
+                        Spacer()
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("CVV")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            SecureField("123", text: $cvv)
+                                .keyboardType(.numberPad)
+                                .frame(width: 60)
+                                .focused($focusedField, equals: .cvv)
+                                .onChange(of: cvv) { oldValue, newValue in
+                                    // Only allow digits, max 4
+                                    let filtered = newValue.filter { $0.isNumber }
+                                    if filtered.count <= 4 {
+                                        cvv = filtered
+                                    } else {
+                                        cvv = String(filtered.prefix(4))
+                                    }
+
+                                    // Auto-dismiss keyboard when CVV is complete
+                                    // Amex (starts with 3) has 4-digit CVV, others have 3-digit
+                                    let isAmex = cardNumberDigits.hasPrefix("3")
+                                    let requiredLength = isAmex ? 4 : 3
+                                    if filtered.count == requiredLength {
+                                        focusedField = nil
+                                    }
                                 }
-                            }
+                        }
                     }
                 }
             } header: {
-                Text("Card Information")
+                Text(isVaultMode ? "Payment Method" : "Card Information")
             }
 
             // Customer Section
@@ -527,7 +606,7 @@ struct NewSaleView: View {
                 .foregroundStyle(.white)
             }
         }
-        .navigationTitle("New Sale")
+        .navigationTitle(isVaultMode ? "Vault Sale" : "New Sale")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -537,7 +616,33 @@ struct NewSaleView: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
+        .sheet(isPresented: $showCustomerVault) {
+            CustomerVaultView { customer in
+                selectedVaultCustomer = customer
+                // Pre-fill customer info from vault
+                firstName = customer.firstName
+                lastName = customer.lastName
+                email = customer.email
+                address = customer.address1
+                city = customer.city
+                state = customer.state
+                postalCode = customer.postalCode
+                country = customer.country.isEmpty ? "US" : customer.country
+            }
+        }
         .onAppear {
+            // Pre-fill customer info in vault mode (from prefilled customer)
+            if let customer = prefilledCustomer {
+                firstName = customer.firstName
+                lastName = customer.lastName
+                email = customer.email
+                address = customer.address1
+                city = customer.city
+                state = customer.state
+                postalCode = customer.postalCode
+                country = customer.country.isEmpty ? "US" : customer.country
+            }
+
             // Focus the amount field when view appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 focusedField = .amount
@@ -650,8 +755,13 @@ struct NewSaleView: View {
                         receiptDetailRow("Tip", value: tipAmount.formatted(as: appState.settings.currency))
                     }
 
-                    receiptDetailRow("Method", value: detectCardType(cardNumberDigits))
-                    receiptDetailRow("Card", value: "•••• •••• •••• \(String(cardNumberDigits.suffix(4)))")
+                    if let customer = activeVaultCustomer {
+                        receiptDetailRow("Method", value: customer.cardTypeDisplayName)
+                        receiptDetailRow("Card", value: "\u{2022}\u{2022}\u{2022}\u{2022} \u{2022}\u{2022}\u{2022}\u{2022} \u{2022}\u{2022}\u{2022}\u{2022} \(customer.lastFour)")
+                    } else {
+                        receiptDetailRow("Method", value: detectCardType(cardNumberDigits))
+                        receiptDetailRow("Card", value: "\u{2022}\u{2022}\u{2022}\u{2022} \u{2022}\u{2022}\u{2022}\u{2022} \u{2022}\u{2022}\u{2022}\u{2022} \(String(cardNumberDigits.suffix(4)))")
+                    }
                     receiptDetailRow("Date", value: Date().formattedDateTime)
                     receiptDetailRow("Transaction ID", value: result.transactionId ?? "N/A")
 
@@ -998,6 +1108,17 @@ struct NewSaleView: View {
     private func shareReceipt() {
         guard let result = transactionResult else { return }
 
+        let cardType: String
+        let lastFour: String
+
+        if let customer = activeVaultCustomer {
+            cardType = customer.cardTypeDisplayName
+            lastFour = customer.lastFour
+        } else {
+            cardType = detectCardType(cardNumberDigits)
+            lastFour = String(cardNumberDigits.suffix(4))
+        }
+
         let receiptView = ReceiptView(
             transactionId: result.transactionId ?? "N/A",
             authCode: result.authCode,
@@ -1008,8 +1129,8 @@ struct NewSaleView: View {
             surchargeRate: appState.settings.surchargeRate,
             tip: tipAmount,
             currency: appState.settings.currency,
-            cardType: detectCardType(cardNumberDigits),
-            lastFour: String(cardNumberDigits.suffix(4)),
+            cardType: cardType,
+            lastFour: lastFour,
             customerName: "\(firstName) \(lastName)",
             date: Date(),
             merchantName: appState.merchantProfile?.displayName ?? "Merchant"
@@ -1078,29 +1199,48 @@ struct NewSaleView: View {
         isProcessing = true
         errorMessage = nil
 
-        let saleRequest = SaleRequest(
-            amount: amount,
-            tax: taxAmount,
-            tip: tipAmount,
-            cardNumber: cardNumberDigits,
-            expirationMonth: expirationMonth,
-            expirationYear: expirationYear,
-            cvv: cvv,
-            firstName: firstName,
-            lastName: lastName,
-            address1: address,
-            city: city,
-            state: state,
-            postalCode: postalCode,
-            country: country,
-            email: email
-        )
-
         do {
-            let result = try await NMIService.shared.processSale(
-                securityKey: appState.securityKey,
-                sale: saleRequest
-            )
+            let result: NMITransactionResponse
+
+            if let customer = activeVaultCustomer {
+                // Vault mode: process using stored payment method
+                let vaultRequest = VaultSaleRequest(
+                    customerVaultId: customer.customerVaultId,
+                    billingId: nil,
+                    amount: amount,
+                    tax: taxAmount,
+                    tip: tipAmount
+                )
+
+                result = try await NMIService.shared.processVaultSale(
+                    securityKey: appState.securityKey,
+                    sale: vaultRequest
+                )
+            } else {
+                // Normal mode: process with card details
+                let saleRequest = SaleRequest(
+                    amount: amount,
+                    tax: taxAmount,
+                    tip: tipAmount,
+                    cardNumber: cardNumberDigits,
+                    expirationMonth: expirationMonth,
+                    expirationYear: expirationYear,
+                    cvv: cvv,
+                    firstName: firstName,
+                    lastName: lastName,
+                    address1: address,
+                    city: city,
+                    state: state,
+                    postalCode: postalCode,
+                    country: country,
+                    email: email
+                )
+
+                result = try await NMIService.shared.processSale(
+                    securityKey: appState.securityKey,
+                    sale: saleRequest
+                )
+            }
 
             transactionResult = result
             showResult = true

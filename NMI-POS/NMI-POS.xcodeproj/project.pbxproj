@@ -24,6 +24,7 @@
 		C9A366092F1BB38A00E6B404 /* iProcess Icon 2026.icon in Resources */ = {isa = PBXBuildFile; fileRef = C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */; };
 		C9A3660B2F1BB77100E6B404 /* TransactionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A3660A2F1BB77100E6B404 /* TransactionDetailView.swift */; };
 		C9D894152F23BFFE00F2F6A8 /* iProcessIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = C9D894142F23BFFE00F2F6A8 /* iProcessIcon.png */; };
+		C9D8949C2F23F08900F2F6A8 /* CustomerVaultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D8949B2F23F08900F2F6A8 /* CustomerVaultView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +46,7 @@
 		C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "iProcess Icon 2026.icon"; sourceTree = "<group>"; };
 		C9A3660A2F1BB77100E6B404 /* TransactionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionDetailView.swift; sourceTree = "<group>"; };
 		C9D894142F23BFFE00F2F6A8 /* iProcessIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = iProcessIcon.png; sourceTree = "<group>"; };
+		C9D8949B2F23F08900F2F6A8 /* CustomerVaultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomerVaultView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +104,7 @@
 				109 /* HistoryView.swift */,
 				110 /* SettingsView.swift */,
 				C9A3660A2F1BB77100E6B404 /* TransactionDetailView.swift */,
+				C9D8949B2F23F08900F2F6A8 /* CustomerVaultView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -209,6 +212,7 @@
 				007 /* MainView.swift in Sources */,
 				008 /* NewSaleView.swift in Sources */,
 				009 /* HistoryView.swift in Sources */,
+				C9D8949C2F23F08900F2F6A8 /* CustomerVaultView.swift in Sources */,
 				010 /* SettingsView.swift in Sources */,
 				011 /* NMIService.swift in Sources */,
 				C9A3660B2F1BB77100E6B404 /* TransactionDetailView.swift in Sources */,

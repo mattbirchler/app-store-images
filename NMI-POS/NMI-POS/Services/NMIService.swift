@@ -741,6 +741,223 @@ actor NMIService {
         return actions
     }
 
+    // MARK: - Customer Vault
+
+    func getVaultCustomers(securityKey: String, customerVaultId: String? = nil) async throws -> [VaultCustomer] {
+        var components = URLComponents(string: queryURL)!
+
+        var params: [String: String] = [
+            "security_key": securityKey,
+            "report_type": "customer_vault"
+        ]
+
+        // Optional filter for specific customer
+        if let vaultId = customerVaultId {
+            params["customer_vault_id"] = vaultId
+        }
+
+        components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
+
+        guard let url = components.url else {
+            throw NMIError.networkError("Invalid URL")
+        }
+
+        APILogger.logRequest(endpoint: queryURL, method: "GET", parameters: params)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 30
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            APILogger.logError(endpoint: queryURL, error: error)
+            throw NMIError.networkError(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NMIError.networkError("Invalid response")
+        }
+
+        guard let xmlString = String(data: data, encoding: .utf8) else {
+            throw NMIError.parseError("Unable to decode response")
+        }
+
+        APILogger.logResponse(endpoint: queryURL, statusCode: httpResponse.statusCode, body: xmlString)
+
+        guard httpResponse.statusCode == 200 else {
+            throw NMIError.networkError("Server returned status \(httpResponse.statusCode)")
+        }
+
+        return try parseVaultCustomersResponse(xmlString)
+    }
+
+    private func parseVaultCustomersResponse(_ xml: String) throws -> [VaultCustomer] {
+        let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "NMI-POS", category: "VaultParsing")
+
+        // Log the full XML for debugging
+        logger.info("🔍 VAULT RESPONSE LENGTH: \(xml.count) characters")
+        logger.info("🔍 VAULT RESPONSE PREVIEW: \(String(xml.prefix(1000)))")
+
+        // Check for error response
+        if xml.contains("<error_response>") || xml.contains("Invalid Security Key") ||
+           xml.contains("Authentication Failed") {
+            logger.error("❌ VAULT ERROR: Authentication or error response detected")
+            throw NMIError.invalidCredentials
+        }
+
+        // Check if we have a customer_vault section
+        if !xml.contains("<customer_vault>") {
+            logger.warning("⚠️ No <customer_vault> tag found in response")
+            logger.info("🔍 Response contains: nm_response=\(xml.contains("<nm_response>")), customer=\(xml.contains("<customer>"))")
+            return []
+        }
+
+        // Extract the customer_vault section
+        guard let vaultStart = xml.range(of: "<customer_vault>"),
+              let vaultEnd = xml.range(of: "</customer_vault>", range: vaultStart.upperBound..<xml.endIndex) else {
+            logger.warning("⚠️ Could not extract customer_vault section")
+            return []
+        }
+
+        let vaultXml = String(xml[vaultStart.upperBound..<vaultEnd.lowerBound])
+        logger.info("🔍 VAULT SECTION LENGTH: \(vaultXml.count) characters")
+
+        var customers: [VaultCustomer] = []
+
+        // Split by customer tags within customer_vault
+        // Note: customer tags may have attributes like <customer id="123">
+        // So we need to split by "<customer " or "<customer>" pattern
+        let pattern = "<customer[^>]*>"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            logger.error("❌ Failed to create regex for customer parsing")
+            return []
+        }
+
+        let matches = regex.matches(in: vaultXml, options: [], range: NSRange(vaultXml.startIndex..., in: vaultXml))
+        logger.info("🔍 Found \(matches.count) <customer> blocks")
+
+        for match in matches {
+            guard let matchRange = Range(match.range, in: vaultXml) else { continue }
+            let startIndex = matchRange.upperBound
+
+            guard let endRange = vaultXml.range(of: "</customer>", range: startIndex..<vaultXml.endIndex) else { continue }
+            let customerXml = String(vaultXml[startIndex..<endRange.lowerBound])
+
+            let customerVaultId = extractValue(from: customerXml, tag: "customer_vault_id") ?? ""
+            guard !customerVaultId.isEmpty else { continue }
+
+            let firstName = extractValue(from: customerXml, tag: "first_name") ?? ""
+            let lastName = extractValue(from: customerXml, tag: "last_name") ?? ""
+            let email = extractValue(from: customerXml, tag: "email") ?? ""
+            let phone = extractValue(from: customerXml, tag: "phone") ?? ""
+            let company = extractValue(from: customerXml, tag: "company") ?? ""
+            let address1 = extractValue(from: customerXml, tag: "address_1") ?? ""
+            let city = extractValue(from: customerXml, tag: "city") ?? ""
+            let state = extractValue(from: customerXml, tag: "state") ?? ""
+            let postalCode = extractValue(from: customerXml, tag: "postal_code") ?? ""
+            let country = extractValue(from: customerXml, tag: "country") ?? ""
+            let ccNumber = extractValue(from: customerXml, tag: "cc_number") ?? ""
+            let ccExp = extractValue(from: customerXml, tag: "cc_exp") ?? ""
+            let ccType = extractValue(from: customerXml, tag: "cc_type") ?? ""
+            let ccBin = extractValue(from: customerXml, tag: "cc_bin") ?? ""
+
+            let createdStr = extractValue(from: customerXml, tag: "created") ?? ""
+            let updatedStr = extractValue(from: customerXml, tag: "updated") ?? ""
+            let created = parseDate(createdStr)
+            let updated = parseDate(updatedStr)
+
+            let customer = VaultCustomer(
+                id: customerVaultId,
+                customerVaultId: customerVaultId,
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                phone: phone,
+                company: company,
+                address1: address1,
+                city: city,
+                state: state,
+                postalCode: postalCode,
+                country: country,
+                ccNumber: ccNumber,
+                ccExp: ccExp,
+                ccType: ccType,
+                ccBin: ccBin,
+                created: created,
+                updated: updated
+            )
+
+            customers.append(customer)
+            logger.info("✅ Parsed customer: \(customer.displayName) (\(customer.customerVaultId))")
+        }
+
+        logger.info("🔍 VAULT PARSING COMPLETE: \(customers.count) customers parsed")
+
+        // Sort by updated date descending (most recent first)
+        return customers.sorted { ($0.updated ?? .distantPast) > ($1.updated ?? .distantPast) }
+    }
+
+    func processVaultSale(securityKey: String, sale: VaultSaleRequest) async throws -> NMITransactionResponse {
+        var components = URLComponents(string: transactURL)!
+
+        let amountString = String(format: "%.2f", sale.total)
+
+        var params: [String: String] = [
+            "security_key": securityKey,
+            "type": "sale",
+            "amount": amountString,
+            "customer_vault_id": sale.customerVaultId
+        ]
+
+        // Add billing_id if specified (for customers with multiple cards)
+        if let billingId = sale.billingId {
+            params["billing_id"] = billingId
+        }
+
+        // Add tip if present
+        if sale.tip > 0 {
+            params["tip"] = String(format: "%.2f", sale.tip)
+        }
+
+        components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
+
+        guard let url = components.url else {
+            throw NMIError.networkError("Invalid URL")
+        }
+
+        APILogger.logRequest(endpoint: transactURL, method: "POST", parameters: params)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 60
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            APILogger.logError(endpoint: transactURL, error: error)
+            throw NMIError.networkError(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NMIError.networkError("Invalid response")
+        }
+
+        guard let responseString = String(data: data, encoding: .utf8) else {
+            throw NMIError.parseError("Unable to decode response")
+        }
+
+        APILogger.logResponse(endpoint: transactURL, statusCode: httpResponse.statusCode, body: responseString)
+
+        guard httpResponse.statusCode == 200 else {
+            throw NMIError.networkError("Server returned status \(httpResponse.statusCode)")
+        }
+
+        return parseTransactionResponse(responseString)
+    }
+
     // MARK: - Card Type Lookup
 
     func lookupCardType(cardNumber: String) async throws -> CardFundingType {
