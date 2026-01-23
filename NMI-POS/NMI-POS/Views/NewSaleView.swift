@@ -375,6 +375,14 @@ struct NewSaleView: View {
                                 } else {
                                     cvv = String(filtered.prefix(4))
                                 }
+
+                                // Auto-dismiss keyboard when CVV is complete
+                                // Amex (starts with 3) has 4-digit CVV, others have 3-digit
+                                let isAmex = cardNumberDigits.hasPrefix("3")
+                                let requiredLength = isAmex ? 4 : 3
+                                if filtered.count == requiredLength {
+                                    focusedField = nil
+                                }
                             }
                     }
                 }

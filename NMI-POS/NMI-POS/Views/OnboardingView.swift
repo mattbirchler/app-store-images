@@ -12,7 +12,6 @@ struct OnboardingView: View {
 
     // Tipping settings
     @State private var tippingEnabled = false
-    @State private var tipStrings: [String] = ["15", "20", "25"]
 
     private let totalSteps = 4
 
@@ -22,10 +21,6 @@ struct OnboardingView: View {
 
     private var surchargeRate: Double {
         Double(surchargeRateString) ?? 0
-    }
-
-    private var tipPercentages: [Double] {
-        tipStrings.compactMap { Double($0) }
     }
 
     var body: some View {
@@ -352,79 +347,34 @@ struct OnboardingView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .tint(Color(red: 0.35, green: 0.78, blue: 0.62))
                 .padding()
                 .background(Color(.systemGray6))
                 .cornerRadius(12)
 
                 if tippingEnabled {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Quick Tip Options")
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color(red: 0.35, green: 0.78, blue: 0.62))
+                        Text("Customers will see 15%, 20%, and 25% tip options")
                             .font(.subheadline)
-                            .fontWeight(.medium)
-
-                        HStack(spacing: 12) {
-                            ForEach(0..<3, id: \.self) { index in
-                                OnboardingTipCard(
-                                    percentage: tipStrings[index],
-                                    color: tipCardColor(for: index),
-                                    onUpdate: { newValue in
-                                        tipStrings[index] = newValue
-                                    }
-                                )
-                            }
-                        }
-
-                        Text("Customers can also enter a custom amount")
-                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-
-                    // Preview
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Preview on \(selectedCurrency.symbol)50.00")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-
-                        HStack(spacing: 12) {
-                            ForEach(Array(tipPercentages.enumerated()), id: \.offset) { index, percentage in
-                                if percentage > 0 {
-                                    HStack(spacing: 4) {
-                                        Circle()
-                                            .fill(tipCardColor(for: index))
-                                            .frame(width: 8, height: 8)
-                                        Text("\(selectedCurrency.symbol)\(String(format: "%.0f", 50 * percentage / 100))")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                    }
-                                }
-                            }
-                        }
-                    }
                     .padding()
-                    .background(Color(.systemGray6))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(red: 0.35, green: 0.78, blue: 0.62).opacity(0.1))
                     .cornerRadius(12)
                 }
             }
             .padding(.horizontal, 32)
 
-            if !tippingEnabled {
-                Text("You can enable this later in Settings")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
+            Text("You can customize tip amounts later in Settings")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
 
             Spacer()
         }
         .padding()
-    }
-
-    private func tipCardColor(for index: Int) -> Color {
-        switch index {
-        case 0: return Color(red: 0.35, green: 0.78, blue: 0.62)  // Mint green
-        case 1: return Color(red: 0.40, green: 0.65, blue: 0.95)  // Sky blue
-        case 2: return Color(red: 0.95, green: 0.60, blue: 0.40)  // Warm coral
-        default: return .accentColor
-        }
     }
 
     // MARK: - Actions
@@ -436,69 +386,8 @@ struct OnboardingView: View {
             surchargeEnabled: surchargeEnabled,
             surchargeRate: surchargeRate,
             tippingEnabled: tippingEnabled,
-            tipPercentages: tipPercentages
+            tipPercentages: [15, 20, 25]
         )
-    }
-}
-
-// MARK: - Onboarding Tip Card
-
-struct OnboardingTipCard: View {
-    let percentage: String
-    let color: Color
-    let onUpdate: (String) -> Void
-
-    @State private var isEditing = false
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(isEditing ? color.opacity(0.15) : Color(.systemGray6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(isEditing ? color : Color.clear, lineWidth: 2)
-                )
-
-            VStack(spacing: 4) {
-                if isEditing {
-                    TextField("0", text: Binding(
-                        get: { percentage },
-                        set: { newValue in
-                            let filtered = newValue.filter { $0.isNumber }
-                            if filtered.count <= 3 {
-                                onUpdate(filtered)
-                            }
-                        }
-                    ))
-                    .keyboardType(.numberPad)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .multilineTextAlignment(.center)
-                    .focused($isFocused)
-                    .onAppear { isFocused = true }
-                    .onChange(of: isFocused) { _, newValue in
-                        if !newValue {
-                            withAnimation { isEditing = false }
-                        }
-                    }
-                } else {
-                    Text(percentage.isEmpty ? "—" : percentage)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(percentage.isEmpty ? .tertiary : .primary)
-                }
-
-                Text("%")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(isEditing ? color : .secondary)
-            }
-        }
-        .frame(height: 70)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                isEditing = true
-            }
-        }
     }
 }
 

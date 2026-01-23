@@ -14,15 +14,17 @@ struct LoginView: View {
 
                     // Logo and Title
                     VStack(spacing: 16) {
-                        Image(systemName: "creditcard.fill")
-                            .font(.system(size: 64))
-                            .foregroundStyle(.accent)
+                        Image("iProcessIcon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 100, height: 100)
+                            .cornerRadius(22)
 
-                        Text("NMI POS")
+                        Text("iProcess")
                             .font(.largeTitle)
                             .fontWeight(.bold)
 
-                        Text("Sign in with your NMI gateway credentials")
+                        Text("Sign in with your gateway credentials")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -40,12 +42,12 @@ struct LoginView: View {
 
                             HStack {
                                 if isSecure {
-                                    SecureField("Enter your NMI security key", text: $securityKey)
+                                    SecureField("Enter your security key", text: $securityKey)
                                         .textContentType(.password)
                                         .autocapitalization(.none)
                                         .autocorrectionDisabled()
                                 } else {
-                                    TextField("Enter your NMI security key", text: $securityKey)
+                                    TextField("Enter your security key", text: $securityKey)
                                         .textContentType(.password)
                                         .autocapitalization(.none)
                                         .autocorrectionDisabled()
@@ -111,7 +113,7 @@ struct LoginView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text("Find your security key in your NMI merchant portal under Settings > Security Keys.")
+                        Text("Find your security key in your payment gateway merchant portal under Settings > Security Keys.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)

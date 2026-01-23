@@ -23,6 +23,7 @@
 		014 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114 /* Extensions.swift */; };
 		C9A366092F1BB38A00E6B404 /* iProcess Icon 2026.icon in Resources */ = {isa = PBXBuildFile; fileRef = C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */; };
 		C9A3660B2F1BB77100E6B404 /* TransactionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A3660A2F1BB77100E6B404 /* TransactionDetailView.swift */; };
+		C9D894152F23BFFE00F2F6A8 /* iProcessIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = C9D894142F23BFFE00F2F6A8 /* iProcessIcon.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +44,7 @@
 		114 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "iProcess Icon 2026.icon"; sourceTree = "<group>"; };
 		C9A3660A2F1BB77100E6B404 /* TransactionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionDetailView.swift; sourceTree = "<group>"; };
+		C9D894142F23BFFE00F2F6A8 /* iProcessIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = iProcessIcon.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,6 +78,7 @@
 				306 /* Extensions */,
 				103 /* Assets.xcassets */,
 				C9A366082F1BB38A00E6B404 /* iProcess Icon 2026.icon */,
+				C9D894142F23BFFE00F2F6A8 /* iProcessIcon.png */,
 			);
 			path = "NMI-POS";
 			sourceTree = "<group>";
@@ -187,6 +190,7 @@
 			files = (
 				003 /* Assets.xcassets in Resources */,
 				C9A366092F1BB38A00E6B404 /* iProcess Icon 2026.icon in Resources */,
+				C9D894152F23BFFE00F2F6A8 /* iProcessIcon.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

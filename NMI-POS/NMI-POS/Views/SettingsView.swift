@@ -9,268 +9,93 @@ struct SettingsView: View {
     @State private var pendingSurchargeEnable = false
     @State private var tipStrings: [String] = ["", "", ""]
     @State private var editingTipIndex: Int?
+    @State private var appeared = false
 
     var body: some View {
         NavigationStack {
-            Form {
-                // Account Section
-                Section {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Merchant Profile Card
                     if let profile = appState.merchantProfile {
-                        HStack {
-                            Image(systemName: "building.2")
-                                .font(.title2)
-                                .foregroundStyle(.accent)
-                                .frame(width: 40)
+                        merchantProfileCard(profile)
+                            .opacity(appeared ? 1 : 0)
+                            .offset(y: appeared ? 0 : 20)
+                    }
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(profile.displayName)
-                                    .font(.headline)
+                    // Settings Cards
+                    VStack(spacing: 16) {
+                        // Tax & Fees Section
+                        settingsCard {
+                            VStack(spacing: 0) {
+                                taxSettingsRow
 
-                                if !profile.merchantId.isEmpty {
-                                    Text("Merchant ID: \(profile.merchantId)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+                                SettingsDivider()
+
+                                surchargeSettingsRow
                             }
+                        } header: {
+                            SettingsSectionHeader(icon: "percent", title: "Tax & Fees", color: .orange)
                         }
-                        .padding(.vertical, 4)
-                    }
-                } header: {
-                    Text("Account")
-                }
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 20)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1), value: appeared)
 
-                // Tax Settings Section
-                Section {
-                    HStack {
-                        Text("Tax Rate")
-                        Spacer()
-                        HStack {
-                            TextField("0.00", text: $taxRateString)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 80)
-                                .onChange(of: taxRateString) { _, newValue in
-                                    if let rate = Double(newValue) {
-                                        appState.updateTaxRate(rate)
-                                    }
-                                }
-                            Text("%")
-                                .foregroundStyle(.secondary)
+                        // Tipping Section
+                        settingsCard {
+                            tippingContent
+                        } header: {
+                            SettingsSectionHeader(icon: "heart.fill", title: "Tipping", color: Color(red: 0.35, green: 0.78, blue: 0.62))
                         }
-                    }
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 20)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.15), value: appeared)
 
-                    if appState.settings.taxRate > 0 {
-                        HStack {
-                            Text("Tax on \(appState.settings.currency.symbol)100")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text(appState.settings.currency.symbol + String(format: "%.2f", appState.settings.taxRate))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                        // Currency Section
+                        settingsCard {
+                            currencyRow
+                        } header: {
+                            SettingsSectionHeader(icon: "dollarsign.circle.fill", title: "Currency", color: Color(red: 0.40, green: 0.65, blue: 0.95))
                         }
-                    }
-                } header: {
-                    Text("Tax Settings")
-                } footer: {
-                    Text("This tax rate will be automatically applied to all transactions.")
-                }
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 20)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.2), value: appeared)
 
-                // Surcharge Section
-                Section {
-                    Toggle("Enable Surcharge", isOn: Binding(
-                        get: { appState.settings.surchargeEnabled },
-                        set: { newValue in
-                            if newValue {
-                                // Show warning before enabling
-                                pendingSurchargeEnable = true
-                                showSurchargeWarning = true
-                            } else {
-                                appState.updateSurchargeEnabled(false)
+                        // About Section
+                        settingsCard {
+                            VStack(spacing: 0) {
+                                aboutRow("Version", value: "1.0.0")
+                                SettingsDivider()
+                                aboutRow("Build", value: "1")
                             }
+                        } header: {
+                            SettingsSectionHeader(icon: "info.circle.fill", title: "About", color: .secondary)
                         }
-                    ))
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 20)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.25), value: appeared)
 
-                    if appState.settings.surchargeEnabled {
-                        HStack {
-                            Text("Surcharge Rate")
-                            Spacer()
-                            HStack {
-                                TextField("0.00", text: $surchargeRateString)
-                                    .keyboardType(.decimalPad)
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(width: 60)
-                                    .onChange(of: surchargeRateString) { _, newValue in
-                                        if let rate = Double(newValue), rate <= 3.0 {
-                                            appState.updateSurchargeRate(rate)
-                                        } else if let rate = Double(newValue), rate > 3.0 {
-                                            // Clamp to max 3%
-                                            surchargeRateString = "3.00"
-                                            appState.updateSurchargeRate(3.0)
-                                        }
-                                    }
-                                Text("%")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if appState.settings.surchargeRate > 0 {
-                            HStack {
-                                Text("Surcharge on \(appState.settings.currency.symbol)100")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text(appState.settings.currency.symbol + String(format: "%.2f", appState.settings.surchargeRate))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Surcharge")
-                } footer: {
-                    if appState.settings.surchargeEnabled {
-                        Text("Surcharge applies only to credit cards. Debit, prepaid, and other card types will not be surcharged. Maximum allowed is 3%.")
-                    } else {
-                        Text("Enable surcharging to add a fee for credit card transactions.")
+                        // Sign Out Button
+                        signOutButton
+                            .opacity(appeared ? 1 : 0)
+                            .offset(y: appeared ? 0 : 20)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.3), value: appeared)
                     }
                 }
-
-                // Tipping Section
-                Section {
-                    Toggle("Enable Tipping", isOn: Binding(
-                        get: { appState.settings.tippingEnabled },
-                        set: { appState.updateTippingEnabled($0) }
-                    ))
-
-                    if appState.settings.tippingEnabled {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Quick Tip Options")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 4)
-
-                            HStack(spacing: 12) {
-                                ForEach(0..<3, id: \.self) { index in
-                                    TipPercentageCard(
-                                        percentage: tipStrings[index],
-                                        isEditing: editingTipIndex == index,
-                                        accentColor: tipCardColor(for: index),
-                                        onTap: {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                                editingTipIndex = index
-                                            }
-                                        },
-                                        onUpdate: { newValue in
-                                            tipStrings[index] = newValue
-                                            if let value = Double(newValue) {
-                                                var percentages = appState.settings.tipPercentages
-                                                while percentages.count <= index {
-                                                    percentages.append(0)
-                                                }
-                                                percentages[index] = value
-                                                appState.updateTipPercentages(percentages)
-                                            }
-                                        },
-                                        onCommit: {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                                editingTipIndex = nil
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        .padding(.vertical, 8)
-
-                        // Preview of tip amounts
-                        if appState.settings.tipPercentages.contains(where: { $0 > 0 }) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Preview on \(appState.settings.currency.symbol)100")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-
-                                HStack(spacing: 8) {
-                                    ForEach(Array(appState.settings.tipPercentages.enumerated()), id: \.offset) { index, percentage in
-                                        if percentage > 0 {
-                                            HStack(spacing: 4) {
-                                                Circle()
-                                                    .fill(tipCardColor(for: index))
-                                                    .frame(width: 6, height: 6)
-                                                Text("\(appState.settings.currency.symbol)\(String(format: "%.0f", percentage))")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Tipping")
-                } footer: {
-                    if appState.settings.tippingEnabled {
-                        Text("Customers will see these quick tip options during checkout. They can also enter a custom amount.")
-                    } else {
-                        Text("Enable tipping to let customers add gratuity during checkout.")
-                    }
-                }
-
-                // Currency Section
-                Section {
-                    Picker("Currency", selection: Binding(
-                        get: { appState.settings.currency },
-                        set: { appState.updateCurrency($0) }
-                    )) {
-                        ForEach(Currency.allCases) { currency in
-                            Text("\(currency.symbol) \(currency.rawValue) - \(currency.name)")
-                                .tag(currency)
-                        }
-                    }
-                } header: {
-                    Text("Currency")
-                }
-
-                // App Info Section
-                Section {
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text("1.0.0")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack {
-                        Text("Build")
-                        Spacer()
-                        Text("1")
-                            .foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("About")
-                }
-
-                // Sign Out Section
-                Section {
-                    Button(role: .destructive) {
-                        showSignOutAlert = true
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Sign Out")
-                            Spacer()
-                        }
-                    }
-                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 taxRateString = String(format: "%.2f", appState.settings.taxRate)
                 surchargeRateString = String(format: "%.2f", appState.settings.surchargeRate)
-                // Initialize tip strings
                 for (index, percentage) in appState.settings.tipPercentages.enumerated() where index < 3 {
                     tipStrings[index] = percentage > 0 ? String(format: "%.0f", percentage) : ""
+                }
+                withAnimation {
+                    appeared = true
                 }
             }
             .alert("Sign Out", isPresented: $showSignOutAlert) {
@@ -298,6 +123,370 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Merchant Profile Card
+
+    private func merchantProfileCard(_ profile: MerchantProfile) -> some View {
+        HStack(spacing: 16) {
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor,
+                                Color.accentColor.opacity(0.7)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 56, height: 56)
+
+                Text(profile.displayName.prefix(1).uppercased())
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(profile.displayName)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+
+                if !profile.merchantId.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "building.2")
+                            .font(.system(size: 11))
+                        Text("ID: \(profile.merchantId)")
+                            .font(.system(size: 13))
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 24))
+                .foregroundStyle(.green)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 4)
+        )
+    }
+
+    // MARK: - Settings Card Container
+
+    private func settingsCard<Content: View, Header: View>(
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder header: () -> Header
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            header()
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 0) {
+                content()
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemBackground))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+        }
+    }
+
+    // MARK: - Tax Settings
+
+    private var taxSettingsRow: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Label {
+                    Text("Tax Rate")
+                        .font(.system(size: 16, weight: .medium))
+                } icon: {
+                    Image(systemName: "receipt")
+                        .foregroundStyle(.orange)
+                }
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    TextField("0.00", text: $taxRateString)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .frame(width: 60)
+                        .onChange(of: taxRateString) { _, newValue in
+                            if let rate = Double(newValue) {
+                                appState.updateTaxRate(rate)
+                            }
+                        }
+
+                    Text("%")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
+            }
+
+            if appState.settings.taxRate > 0 {
+                HStack {
+                    Spacer()
+                    Text("On \(appState.settings.currency.symbol)100 → +\(appState.settings.currency.symbol)\(String(format: "%.2f", appState.settings.taxRate))")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(16)
+    }
+
+    // MARK: - Surcharge Settings
+
+    private var surchargeSettingsRow: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Label {
+                    Text("Credit Card Surcharge")
+                        .font(.system(size: 16, weight: .medium))
+                } icon: {
+                    Image(systemName: "creditcard")
+                        .foregroundStyle(.orange)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { appState.settings.surchargeEnabled },
+                    set: { newValue in
+                        if newValue {
+                            pendingSurchargeEnable = true
+                            showSurchargeWarning = true
+                        } else {
+                            appState.updateSurchargeEnabled(false)
+                        }
+                    }
+                ))
+                .labelsHidden()
+                .tint(.orange)
+            }
+
+            if appState.settings.surchargeEnabled {
+                VStack(spacing: 12) {
+                    HStack {
+                        Text("Rate")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        HStack(spacing: 4) {
+                            TextField("0.00", text: $surchargeRateString)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .frame(width: 50)
+                                .onChange(of: surchargeRateString) { _, newValue in
+                                    if let rate = Double(newValue), rate <= 3.0 {
+                                        appState.updateSurchargeRate(rate)
+                                    } else if let rate = Double(newValue), rate > 3.0 {
+                                        surchargeRateString = "3.00"
+                                        appState.updateSurchargeRate(3.0)
+                                    }
+                                }
+
+                            Text("%")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                    }
+
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 12))
+                        Text("Maximum 3% • Credit cards only")
+                            .font(.system(size: 12))
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding(16)
+        .animation(.spring(response: 0.3), value: appState.settings.surchargeEnabled)
+    }
+
+    // MARK: - Tipping Content
+
+    private var tippingContent: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Label {
+                    Text("Enable Tipping")
+                        .font(.system(size: 16, weight: .medium))
+                } icon: {
+                    Image(systemName: "heart")
+                        .foregroundStyle(Color(red: 0.35, green: 0.78, blue: 0.62))
+                }
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { appState.settings.tippingEnabled },
+                    set: { appState.updateTippingEnabled($0) }
+                ))
+                .labelsHidden()
+                .tint(Color(red: 0.35, green: 0.78, blue: 0.62))
+            }
+
+            if appState.settings.tippingEnabled {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("QUICK TIP OPTIONS")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                        .tracking(0.5)
+
+                    HStack(spacing: 10) {
+                        ForEach(0..<3, id: \.self) { index in
+                            TipPercentageCard(
+                                percentage: tipStrings[index],
+                                isEditing: editingTipIndex == index,
+                                accentColor: tipCardColor(for: index),
+                                onTap: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        editingTipIndex = index
+                                    }
+                                },
+                                onUpdate: { newValue in
+                                    tipStrings[index] = newValue
+                                    if let value = Double(newValue) {
+                                        var percentages = appState.settings.tipPercentages
+                                        while percentages.count <= index {
+                                            percentages.append(0)
+                                        }
+                                        percentages[index] = value
+                                        appState.updateTipPercentages(percentages)
+                                    }
+                                },
+                                onCommit: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        editingTipIndex = nil
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    // Preview chips
+                    if appState.settings.tipPercentages.contains(where: { $0 > 0 }) {
+                        HStack(spacing: 6) {
+                            Text("On \(appState.settings.currency.symbol)100:")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.tertiary)
+
+                            ForEach(Array(appState.settings.tipPercentages.enumerated()), id: \.offset) { index, percentage in
+                                if percentage > 0 {
+                                    Text("\(appState.settings.currency.symbol)\(String(format: "%.0f", percentage))")
+                                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                                        .foregroundStyle(tipCardColor(for: index))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(tipCardColor(for: index).opacity(0.12))
+                                        .cornerRadius(6)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding(16)
+        .animation(.spring(response: 0.3), value: appState.settings.tippingEnabled)
+    }
+
+    // MARK: - Currency Row
+
+    private var currencyRow: some View {
+        HStack {
+            Label {
+                Text("Default Currency")
+                    .font(.system(size: 16, weight: .medium))
+            } icon: {
+                Text(appState.settings.currency.symbol)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color(red: 0.40, green: 0.65, blue: 0.95))
+            }
+
+            Spacer()
+
+            Picker("", selection: Binding(
+                get: { appState.settings.currency },
+                set: { appState.updateCurrency($0) }
+            )) {
+                ForEach(Currency.allCases) { currency in
+                    Text("\(currency.symbol) \(currency.rawValue)")
+                        .tag(currency)
+                }
+            }
+            .labelsHidden()
+            .tint(.primary)
+        }
+        .padding(16)
+    }
+
+    // MARK: - About Row
+
+    private func aboutRow(_ label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(.system(size: 15, weight: .medium, design: .monospaced))
+                .foregroundStyle(.primary)
+        }
+        .padding(16)
+    }
+
+    // MARK: - Sign Out Button
+
+    private var signOutButton: some View {
+        Button {
+            showSignOutAlert = true
+        } label: {
+            HStack {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 16, weight: .medium))
+                Text("Sign Out")
+                    .font(.system(size: 16, weight: .medium))
+            }
+            .foregroundStyle(.red)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.red.opacity(0.1))
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 8)
+    }
+
+    // MARK: - Helpers
+
     private func tipCardColor(for index: Int) -> Color {
         switch index {
         case 0: return Color(red: 0.35, green: 0.78, blue: 0.62)  // Mint green
@@ -305,6 +494,38 @@ struct SettingsView: View {
         case 2: return Color(red: 0.95, green: 0.60, blue: 0.40)  // Warm coral
         default: return .accentColor
         }
+    }
+}
+
+// MARK: - Section Header
+
+struct SettingsSectionHeader: View {
+    let icon: String
+    let title: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(color)
+
+            Text(title.uppercased())
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+        }
+    }
+}
+
+// MARK: - Settings Divider
+
+struct SettingsDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color(.systemGray5))
+            .frame(height: 1)
+            .padding(.leading, 52)
     }
 }
 
@@ -322,27 +543,32 @@ struct TipPercentageCard: View {
 
     var body: some View {
         ZStack {
-            // Background
-            RoundedRectangle(cornerRadius: 16)
+            // Background with gradient when editing
+            RoundedRectangle(cornerRadius: 14)
                 .fill(
                     isEditing
-                        ? accentColor.opacity(0.15)
-                        : Color(.systemGray6)
+                        ? AnyShapeStyle(
+                            LinearGradient(
+                                colors: [accentColor.opacity(0.2), accentColor.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        : AnyShapeStyle(Color(.systemGray6))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 14)
                         .strokeBorder(
                             isEditing ? accentColor : Color.clear,
                             lineWidth: 2
                         )
                 )
 
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 if isEditing {
                     TextField("0", text: Binding(
                         get: { percentage },
                         set: { newValue in
-                            // Only allow digits
                             let filtered = newValue.filter { $0.isNumber }
                             if filtered.count <= 3 {
                                 onUpdate(filtered)
@@ -350,7 +576,7 @@ struct TipPercentageCard: View {
                         }
                     ))
                     .keyboardType(.numberPad)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
                     .multilineTextAlignment(.center)
                     .focused($isFocused)
                     .onAppear { isFocused = true }
@@ -361,16 +587,16 @@ struct TipPercentageCard: View {
                     }
                 } else {
                     Text(percentage.isEmpty ? "—" : percentage)
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(percentage.isEmpty ? .tertiary : .primary)
                 }
 
                 Text("%")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(isEditing ? accentColor : .secondary)
             }
         }
-        .frame(height: 80)
+        .frame(height: 72)
         .contentShape(Rectangle())
         .onTapGesture {
             if !isEditing {
@@ -387,7 +613,7 @@ struct TipPercentageCard: View {
             let state = AppState()
             state.merchantProfile = MerchantProfile(
                 merchantId: "123456",
-                companyName: "Acme Store",
+                companyName: "Birchwood Coffee",
                 firstName: "John",
                 lastName: "Doe",
                 email: "john@acme.com",
