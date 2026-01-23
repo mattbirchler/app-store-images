@@ -497,11 +497,12 @@ actor NMIService {
 
     // MARK: - Query Transactions
 
-    func getTransactions(securityKey: String, startDate: Date? = nil, endDate: Date? = nil) async throws -> [Transaction] {
+    func getTransactions(securityKey: String, startDate: Date? = nil, endDate: Date? = nil, adjustForTimezone: Bool = false) async throws -> [Transaction] {
         var components = URLComponents(string: queryURL)!
 
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyyMMdd"
+        dateFormatter.dateFormat = "yyyyMMddHHmmss"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
 
         var params: [String: String] = [
             "security_key": securityKey,
@@ -509,11 +510,27 @@ actor NMIService {
         ]
 
         if let start = startDate {
-            params["start_date"] = dateFormatter.string(from: start)
+            if adjustForTimezone {
+                // Convert local time to UTC for the API query
+                // The API expects UTC times, so we pass the local time directly
+                // which will be formatted as UTC
+                params["start_date"] = dateFormatter.string(from: start)
+            } else {
+                // Legacy behavior: just use date portion
+                let legacyFormatter = DateFormatter()
+                legacyFormatter.dateFormat = "yyyyMMdd"
+                params["start_date"] = legacyFormatter.string(from: start)
+            }
         }
 
         if let end = endDate {
-            params["end_date"] = dateFormatter.string(from: end)
+            if adjustForTimezone {
+                params["end_date"] = dateFormatter.string(from: end)
+            } else {
+                let legacyFormatter = DateFormatter()
+                legacyFormatter.dateFormat = "yyyyMMdd"
+                params["end_date"] = legacyFormatter.string(from: end)
+            }
         }
 
         components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
@@ -637,7 +654,8 @@ actor NMIService {
         let transactions = try await getTransactions(
             securityKey: securityKey,
             startDate: today,
-            endDate: tomorrow
+            endDate: tomorrow,
+            adjustForTimezone: true
         )
 
         let approvedTransactions = transactions.filter { $0.status.isSuccessful }
