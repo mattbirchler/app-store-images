@@ -53,6 +53,11 @@ struct AppSettings: Codable, Equatable {
     var tipPercentages: [Double]  // Up to 3 custom tip percentages
     var biometricEnabled: Bool
 
+    // Sale form customization
+    var showBillingAddress: Bool
+    var showOrderInformation: Bool
+    var showAdditionalInformation: Bool  // Merchant defined fields
+
     static let `default` = AppSettings(
         currency: .usd,
         taxRate: 0.0,
@@ -62,7 +67,10 @@ struct AppSettings: Codable, Equatable {
         surchargeRate: 0.0,
         tippingEnabled: false,
         tipPercentages: [15, 20, 25],
-        biometricEnabled: false
+        biometricEnabled: false,
+        showBillingAddress: true,
+        showOrderInformation: false,
+        showAdditionalInformation: true
     )
 }
 
@@ -218,6 +226,11 @@ struct SaleRequest {
     let country: String
     let email: String
     let merchantDefinedFields: [String: String]  // Field ID -> Value
+
+    // Order information
+    let orderId: String
+    let poNumber: String
+    let orderDescription: String
 
     var total: Double {
         amount + tax + tip
@@ -470,6 +483,11 @@ struct VaultSaleRequest {
     let tax: Double
     let tip: Double
     let merchantDefinedFields: [String: String]  // Field ID -> Value
+
+    // Order information
+    let orderId: String
+    let poNumber: String
+    let orderDescription: String
 
     var total: Double {
         amount + tax + tip

@@ -482,6 +482,17 @@ actor NMIService {
             }
         }
 
+        // Add order information
+        if !sale.orderId.isEmpty {
+            params["orderid"] = sale.orderId
+        }
+        if !sale.poNumber.isEmpty {
+            params["ponumber"] = sale.poNumber
+        }
+        if !sale.orderDescription.isEmpty {
+            params["order_description"] = sale.orderDescription
+        }
+
         components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
 
         guard let url = components.url else {
@@ -1175,6 +1186,17 @@ actor NMIService {
             if !value.isEmpty {
                 params["merchant_defined_field_\(fieldId)"] = value
             }
+        }
+
+        // Add order information
+        if !sale.orderId.isEmpty {
+            params["orderid"] = sale.orderId
+        }
+        if !sale.poNumber.isEmpty {
+            params["ponumber"] = sale.poNumber
+        }
+        if !sale.orderDescription.isEmpty {
+            params["order_description"] = sale.orderDescription
         }
 
         components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }

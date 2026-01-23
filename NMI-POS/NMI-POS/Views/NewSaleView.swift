@@ -92,6 +92,11 @@ struct NewSaleView: View {
     // Merchant defined fields state - Dictionary of field ID to value
     @State private var merchantDefinedFieldValues: [String: String] = [:]
 
+    // Order information state
+    @State private var orderId = ""
+    @State private var poNumber = ""
+    @State private var orderDescription = ""
+
     private var amount: Double {
         Double(amountString) ?? 0
     }
@@ -509,64 +514,95 @@ struct NewSaleView: View {
             }
 
             // Address Section
-            Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Street Address")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextField("123 Main St", text: $address)
-                        .textContentType(.streetAddressLine1)
-                        .focused($focusedField, equals: .address)
+            if appState.settings.showBillingAddress {
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Street Address")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("123 Main St", text: $address)
+                            .textContentType(.streetAddressLine1)
+                            .focused($focusedField, equals: .address)
+                    }
+
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("City")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("City", text: $city)
+                                .textContentType(.addressCity)
+                                .focused($focusedField, equals: .city)
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("State")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("ST", text: $state)
+                                .textContentType(.addressState)
+                                .frame(width: 60)
+                                .focused($focusedField, equals: .state)
+                        }
+                    }
+
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Postal Code")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("12345", text: $postalCode)
+                                .keyboardType(.numberPad)
+                                .textContentType(.postalCode)
+                                .focused($focusedField, equals: .postalCode)
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Country")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("US", text: $country)
+                                .textContentType(.countryName)
+                                .frame(width: 60)
+                                .focused($focusedField, equals: .country)
+                        }
+                    }
+                } header: {
+                    Text("Billing Address")
                 }
+            }
 
-                HStack(spacing: 16) {
+            // Order Information Section
+            if appState.settings.showOrderInformation {
+                Section {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("City")
+                        Text("Order ID")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        TextField("City", text: $city)
-                            .textContentType(.addressCity)
-                            .focused($focusedField, equals: .city)
+                        TextField("", text: $orderId)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("State")
+                        Text("PO Number")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        TextField("ST", text: $state)
-                            .textContentType(.addressState)
-                            .frame(width: 60)
-                            .focused($focusedField, equals: .state)
+                        TextField("", text: $poNumber)
                     }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Order Description")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("", text: $orderDescription)
+                    }
+                } header: {
+                    Text("Order Information")
                 }
-
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Postal Code")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("12345", text: $postalCode)
-                            .keyboardType(.numberPad)
-                            .textContentType(.postalCode)
-                            .focused($focusedField, equals: .postalCode)
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Country")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("US", text: $country)
-                            .textContentType(.countryName)
-                            .frame(width: 60)
-                            .focused($focusedField, equals: .country)
-                    }
-                }
-            } header: {
-                Text("Billing Address")
             }
 
             // Merchant Defined Fields Section
-            if let profile = appState.merchantProfile,
+            if appState.settings.showAdditionalInformation,
+               let profile = appState.merchantProfile,
                !profile.activeMerchantDefinedFields.isEmpty {
                 Section {
                     ForEach(profile.activeMerchantDefinedFields) { field in
@@ -1247,7 +1283,10 @@ struct NewSaleView: View {
                     amount: amount,
                     tax: taxAmount,
                     tip: tipAmount,
-                    merchantDefinedFields: merchantDefinedFieldValues
+                    merchantDefinedFields: merchantDefinedFieldValues,
+                    orderId: orderId,
+                    poNumber: poNumber,
+                    orderDescription: orderDescription
                 )
 
                 result = try await NMIService.shared.processVaultSale(
@@ -1272,7 +1311,10 @@ struct NewSaleView: View {
                     postalCode: postalCode,
                     country: country,
                     email: email,
-                    merchantDefinedFields: merchantDefinedFieldValues
+                    merchantDefinedFields: merchantDefinedFieldValues,
+                    orderId: orderId,
+                    poNumber: poNumber,
+                    orderDescription: orderDescription
                 )
 
                 result = try await NMIService.shared.processSale(

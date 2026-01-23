@@ -74,6 +74,30 @@ struct SettingsView: View {
                             .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.25), value: appeared)
                         }
 
+                        // Sale Form Customization Section
+                        settingsCard {
+                            NavigationLink {
+                                SaleFormSettingsView()
+                                    .environmentObject(appState)
+                            } label: {
+                                HStack {
+                                    Text("Customize Sale Form")
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                            }
+                        } header: {
+                            SettingsSectionHeader(icon: "square.and.pencil", title: "Sale Form", color: .purple)
+                        }
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 20)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.27), value: appeared)
+
                         // About Section
                         settingsCard {
                             VStack(spacing: 0) {
@@ -672,6 +696,72 @@ struct TipPercentageCard: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isEditing)
+    }
+}
+
+// MARK: - Sale Form Settings View
+
+struct SaleFormSettingsView: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        Form {
+            Section {
+                Text("Configure which sections appear on the New Sale form. Amount, card information, and customer information are always shown.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Billing Address", isOn: Binding(
+                    get: { appState.settings.showBillingAddress },
+                    set: { newValue in
+                        appState.settings.showBillingAddress = newValue
+                        saveSettings()
+                    }
+                ))
+
+                Toggle("Order Information", isOn: Binding(
+                    get: { appState.settings.showOrderInformation },
+                    set: { newValue in
+                        appState.settings.showOrderInformation = newValue
+                        saveSettings()
+                    }
+                ))
+
+                if let profile = appState.merchantProfile,
+                   !profile.activeMerchantDefinedFields.isEmpty {
+                    Toggle("Additional Information", isOn: Binding(
+                        get: { appState.settings.showAdditionalInformation },
+                        set: { newValue in
+                            appState.settings.showAdditionalInformation = newValue
+                            saveSettings()
+                        }
+                    ))
+                }
+            } header: {
+                Text("Optional Sections")
+            } footer: {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("**Billing Address** - Customer street address, city, state, postal code, and country.")
+                    Text("**Order Information** - Order ID, PO number, and order description fields.")
+                    if let profile = appState.merchantProfile,
+                       !profile.activeMerchantDefinedFields.isEmpty {
+                        Text("**Additional Information** - Your custom merchant defined fields from NMI.")
+                    }
+                }
+                .font(.caption)
+            }
+        }
+        .navigationTitle("Sale Form")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func saveSettings() {
+        if let data = try? JSONEncoder().encode(appState.settings) {
+            UserDefaults.standard.set(data, forKey: "app_settings")
+        }
     }
 }
 
