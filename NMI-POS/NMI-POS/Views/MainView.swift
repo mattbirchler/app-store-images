@@ -8,10 +8,16 @@ struct MainView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            SaleTab(onTodayRevenueTapped: {
-                historyDateRange = .today
-                selectedTab = 1
-            })
+            SaleTab(
+                onTodayRevenueTapped: {
+                    historyDateRange = .today
+                    selectedTab = 1
+                },
+                onWeeklyChartTapped: {
+                    historyDateRange = .last7Days
+                    selectedTab = 1
+                }
+            )
                 .tabItem {
                     Label("Sale", systemImage: "creditcard")
                 }
@@ -48,6 +54,7 @@ struct SaleTab: View {
     @State private var isLoadingWeekly = false
 
     var onTodayRevenueTapped: () -> Void
+    var onWeeklyChartTapped: () -> Void
 
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -74,50 +81,61 @@ struct SaleTab: View {
 
                         // Weekly Volume Chart
                         if !weeklyData.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Last 7 Days")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(.secondary)
-                                    .textCase(.uppercase)
-                                    .tracking(1)
-
-                                Chart(weeklyData) { day in
-                                    BarMark(
-                                        x: .value("Date", day.date, unit: .day),
-                                        y: .value("Revenue", day.revenue)
-                                    )
-                                    .foregroundStyle(Color.accentColor.gradient)
-                                    .cornerRadius(4)
-                                }
-                                .chartXAxis {
-                                    AxisMarks(values: .stride(by: .day)) { value in
-                                        AxisValueLabel(format: .dateTime.weekday(.narrow))
-                                            .font(.caption2)
+                            Button {
+                                onWeeklyChartTapped()
+                            } label: {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Last 7 Days")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(.secondary)
+                                            .textCase(.uppercase)
+                                            .tracking(1)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
                                     }
-                                }
-                                .chartYAxis {
-                                    AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
-                                        AxisGridLine()
-                                            .foregroundStyle(Color(.systemGray5))
-                                        AxisValueLabel {
-                                            if let revenue = value.as(Double.self) {
-                                                Text(formatChartValue(revenue))
-                                                    .font(.caption2)
+
+                                    Chart(weeklyData) { day in
+                                        BarMark(
+                                            x: .value("Date", day.date, unit: .day),
+                                            y: .value("Revenue", day.revenue)
+                                        )
+                                        .foregroundStyle(Color.accentColor.gradient)
+                                        .cornerRadius(4)
+                                    }
+                                    .chartXAxis {
+                                        AxisMarks(values: .stride(by: .day)) { value in
+                                            AxisValueLabel(format: .dateTime.weekday(.narrow))
+                                                .font(.caption2)
+                                        }
+                                    }
+                                    .chartYAxis {
+                                        AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
+                                            AxisGridLine()
+                                                .foregroundStyle(Color(.systemGray5))
+                                            AxisValueLabel {
+                                                if let revenue = value.as(Double.self) {
+                                                    Text(formatChartValue(revenue))
+                                                        .font(.caption2)
+                                                }
                                             }
                                         }
                                     }
+                                    .frame(height: 140)
                                 }
-                                .frame(height: 100)
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(16)
                             }
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(16)
+                            .buttonStyle(.plain)
                         } else if isLoadingWeekly && !hasLoadedOnce {
                             VStack {
                                 ProgressView()
                             }
-                            .frame(height: 100)
+                            .frame(height: 140)
                             .frame(maxWidth: .infinity)
                             .background(Color(.systemGray6))
                             .cornerRadius(16)
@@ -293,6 +311,6 @@ struct DailyVolumeData: Identifiable {
 }
 
 #Preview("Sale Tab") {
-    SaleTab(onTodayRevenueTapped: {})
+    SaleTab(onTodayRevenueTapped: {}, onWeeklyChartTapped: {})
         .environmentObject(AppState())
 }
