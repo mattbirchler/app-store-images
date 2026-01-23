@@ -93,9 +93,14 @@ class AppState: ObservableObject {
 
     // MARK: - Authentication
 
-    func login(securityKey: String) async {
-        guard !securityKey.isEmpty else {
-            errorMessage = "Please enter your security key."
+    func login(username: String, password: String) async {
+        guard !username.isEmpty else {
+            errorMessage = "Please enter your username."
+            return
+        }
+
+        guard !password.isEmpty else {
+            errorMessage = "Please enter your password."
             return
         }
 
@@ -103,13 +108,26 @@ class AppState: ObservableObject {
         errorMessage = nil
 
         do {
-            let profile = try await NMIService.shared.validateCredentialsAndGetProfile(securityKey: securityKey)
+            // Step 1: Authenticate with username/password and get profile
+            let profile = try await NMIService.shared.authenticateWithCredentials(
+                username: username,
+                password: password
+            )
 
-            credentials = NMICredentials(securityKey: securityKey)
+            // Step 2: Get a session API key for subsequent requests
+            let apiKey = try await NMIService.shared.getSessionApiKey(
+                username: username,
+                password: password
+            )
+
+            // Step 3: Store the API key (not the username/password) and profile
+            credentials = NMICredentials(securityKey: apiKey)
             merchantProfile = profile
 
             saveCredentials()
             saveMerchantProfile()
+
+            // Username and password are not stored - they are discarded after obtaining the API key
 
             currentScreen = .welcome
         } catch let error as NMIError {

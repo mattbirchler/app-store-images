@@ -2,8 +2,14 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject var appState: AppState
-    @State private var securityKey = ""
-    @State private var isSecure = true
+    @State private var username = ""
+    @State private var password = ""
+    @State private var isPasswordSecure = true
+    @FocusState private var focusedField: Field?
+
+    enum Field {
+        case username, password
+    }
 
     var body: some View {
         NavigationStack {
@@ -34,29 +40,66 @@ struct LoginView: View {
                         .frame(height: 20)
 
                     // Login Form
-                    VStack(spacing: 20) {
+                    VStack(spacing: 16) {
+                        // Username Field
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Security Key")
+                            Text("Username")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+
+                            TextField("Enter your username", text: $username)
+                                .textContentType(.username)
+                                .autocapitalization(.none)
+                                .autocorrectionDisabled()
+                                .focused($focusedField, equals: .username)
+                                .submitLabel(.next)
+                                .onSubmit {
+                                    focusedField = .password
+                                }
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                        }
+
+                        // Password Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Password")
                                 .font(.subheadline)
                                 .fontWeight(.medium)
 
                             HStack {
-                                if isSecure {
-                                    SecureField("Enter your security key", text: $securityKey)
+                                if isPasswordSecure {
+                                    SecureField("Enter your password", text: $password)
                                         .textContentType(.password)
-                                        .autocapitalization(.none)
-                                        .autocorrectionDisabled()
+                                        .focused($focusedField, equals: .password)
+                                        .submitLabel(.go)
+                                        .onSubmit {
+                                            if canSignIn {
+                                                Task {
+                                                    await appState.login(username: username, password: password)
+                                                }
+                                            }
+                                        }
                                 } else {
-                                    TextField("Enter your security key", text: $securityKey)
+                                    TextField("Enter your password", text: $password)
                                         .textContentType(.password)
                                         .autocapitalization(.none)
                                         .autocorrectionDisabled()
+                                        .focused($focusedField, equals: .password)
+                                        .submitLabel(.go)
+                                        .onSubmit {
+                                            if canSignIn {
+                                                Task {
+                                                    await appState.login(username: username, password: password)
+                                                }
+                                            }
+                                        }
                                 }
 
                                 Button {
-                                    isSecure.toggle()
+                                    isPasswordSecure.toggle()
                                 } label: {
-                                    Image(systemName: isSecure ? "eye.slash" : "eye")
+                                    Image(systemName: isPasswordSecure ? "eye.slash" : "eye")
                                         .foregroundStyle(.secondary)
                                 }
                             }
@@ -83,7 +126,7 @@ struct LoginView: View {
                         // Sign In Button
                         Button {
                             Task {
-                                await appState.login(securityKey: securityKey)
+                                await appState.login(username: username, password: password)
                             }
                         } label: {
                             HStack {
@@ -97,11 +140,11 @@ struct LoginView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(securityKey.isEmpty ? Color.gray : Color.accentColor)
+                            .background(canSignIn ? Color.accentColor : Color.gray)
                             .foregroundStyle(.white)
                             .cornerRadius(12)
                         }
-                        .disabled(securityKey.isEmpty || appState.isLoading)
+                        .disabled(!canSignIn || appState.isLoading)
                     }
                     .padding(.horizontal)
 
@@ -113,7 +156,7 @@ struct LoginView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text("Find your security key in your payment gateway merchant portal under Settings > Security Keys.")
+                        Text("Use the same username and password you use to sign in to your payment gateway merchant portal.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -128,6 +171,10 @@ struct LoginView: View {
                 hideKeyboard()
             }
         }
+    }
+
+    private var canSignIn: Bool {
+        !username.isEmpty && !password.isEmpty
     }
 }
 

@@ -35,6 +35,11 @@ struct APILogger {
             masked["security_key"] = "****"
         }
 
+        // Mask password completely
+        if masked["password"] != nil {
+            masked["password"] = "********"
+        }
+
         // Mask card number - show last 4 only
         if let ccNumber = masked["ccnumber"], ccNumber.count >= 4 {
             let lastFour = String(ccNumber.suffix(4))
@@ -78,7 +83,7 @@ enum NMIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidCredentials:
-            return "Invalid security key. Please check your credentials."
+            return "Invalid credentials. Please check your username and password."
         case .networkError(let message):
             return "Network error: \(message)"
         case .parseError(let message):
@@ -130,6 +135,128 @@ actor NMIService {
     private init() {}
 
     // MARK: - Authentication / Profile Query
+
+    /// Authenticate with username/password and get merchant profile
+    func authenticateWithCredentials(username: String, password: String) async throws -> MerchantProfile {
+        var components = URLComponents(string: queryURL)!
+        components.queryItems = [
+            URLQueryItem(name: "username", value: username),
+            URLQueryItem(name: "password", value: password),
+            URLQueryItem(name: "report_type", value: "profile")
+        ]
+
+        guard let url = components.url else {
+            throw NMIError.networkError("Invalid URL")
+        }
+
+        // Log the request
+        APILogger.logRequest(
+            endpoint: queryURL,
+            method: "GET",
+            parameters: ["username": username, "password": password, "report_type": "profile"]
+        )
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 30
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            APILogger.logError(endpoint: queryURL, error: error)
+            throw NMIError.networkError(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NMIError.networkError("Invalid response")
+        }
+
+        guard let xmlString = String(data: data, encoding: .utf8) else {
+            throw NMIError.parseError("Unable to decode response")
+        }
+
+        // Log the response
+        APILogger.logResponse(endpoint: queryURL, statusCode: httpResponse.statusCode, body: xmlString)
+
+        guard httpResponse.statusCode == 200 else {
+            throw NMIError.networkError("Server returned status \(httpResponse.statusCode)")
+        }
+
+        return try parseProfileResponse(xmlString)
+    }
+
+    /// Get a session API key using username/password credentials
+    func getSessionApiKey(username: String, password: String) async throws -> String {
+        var components = URLComponents(string: queryURL)!
+        components.queryItems = [
+            URLQueryItem(name: "username", value: username),
+            URLQueryItem(name: "password", value: password),
+            URLQueryItem(name: "report_type", value: "session_api_key"),
+            URLQueryItem(name: "new_key_if_empty", value: "true")
+        ]
+
+        guard let url = components.url else {
+            throw NMIError.networkError("Invalid URL")
+        }
+
+        APILogger.logRequest(
+            endpoint: queryURL,
+            method: "GET",
+            parameters: ["username": username, "password": password, "report_type": "session_api_key", "new_key_if_empty": "true"]
+        )
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 30
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            APILogger.logError(endpoint: queryURL, error: error)
+            throw NMIError.networkError(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NMIError.networkError("Invalid response")
+        }
+
+        guard let responseString = String(data: data, encoding: .utf8) else {
+            throw NMIError.parseError("Unable to decode response")
+        }
+
+        APILogger.logResponse(endpoint: queryURL, statusCode: httpResponse.statusCode, body: responseString)
+
+        guard httpResponse.statusCode == 200 else {
+            throw NMIError.networkError("Server returned status \(httpResponse.statusCode)")
+        }
+
+        // Check for error response
+        if responseString.contains("<error_response>") || responseString.contains("Invalid") ||
+           responseString.contains("Authentication Failed") {
+            throw NMIError.invalidCredentials
+        }
+
+        // Extract the API key from XML response
+        if let apiKey = extractValue(from: responseString, tag: "api_key"), !apiKey.isEmpty {
+            return apiKey
+        }
+
+        if let securityKey = extractValue(from: responseString, tag: "security_key"), !securityKey.isEmpty {
+            return securityKey
+        }
+
+        if let sessionKey = extractValue(from: responseString, tag: "session_api_key"), !sessionKey.isEmpty {
+            return sessionKey
+        }
+
+        if let key = extractValue(from: responseString, tag: "key"), !key.isEmpty {
+            return key
+        }
+
+        throw NMIError.parseError("Unable to extract API key from response")
+    }
 
     func validateCredentialsAndGetProfile(securityKey: String) async throws -> MerchantProfile {
         var components = URLComponents(string: queryURL)!
