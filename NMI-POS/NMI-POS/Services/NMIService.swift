@@ -5,6 +5,7 @@ import os.log
 
 struct APILogger {
     private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "NMI-POS", category: "API")
+    private static let profileLogger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "NMI-POS", category: "ProfileQuery")
 
     static func logRequest(endpoint: String, method: String, parameters: [String: String]) {
         let maskedParams = maskSensitiveData(parameters)
@@ -17,6 +18,22 @@ struct APILogger {
         let maskedBody = maskResponseBody(body)
         logger.info("⬅️ RESPONSE [\(statusCode)] \(endpoint)")
         logger.info("   Body: \(maskedBody)")
+    }
+
+    /// Log full profile response without truncation for debugging mdf_detail and processor_details
+    static func logProfileResponse(body: String) {
+        profileLogger.info("📋 PROFILE QUERY RESPONSE (FULL):")
+        // Split into chunks to avoid log truncation (os.log has ~1024 byte limit per message)
+        let chunkSize = 800
+        var remaining = body
+        var chunkIndex = 0
+        while !remaining.isEmpty {
+            let chunk = String(remaining.prefix(chunkSize))
+            remaining = String(remaining.dropFirst(chunkSize))
+            profileLogger.info("   [\(chunkIndex)]: \(chunk)")
+            chunkIndex += 1
+        }
+        profileLogger.info("📋 END PROFILE RESPONSE (total \(body.count) chars)")
     }
 
     static func logError(endpoint: String, error: Error) {
@@ -142,7 +159,9 @@ actor NMIService {
         components.queryItems = [
             URLQueryItem(name: "username", value: username),
             URLQueryItem(name: "password", value: password),
-            URLQueryItem(name: "report_type", value: "profile")
+            URLQueryItem(name: "report_type", value: "profile"),
+            URLQueryItem(name: "mdf_detail", value: "true"),
+            URLQueryItem(name: "processor_details", value: "true")
         ]
 
         guard let url = components.url else {
@@ -153,7 +172,7 @@ actor NMIService {
         APILogger.logRequest(
             endpoint: queryURL,
             method: "GET",
-            parameters: ["username": username, "password": password, "report_type": "profile"]
+            parameters: ["username": username, "password": password, "report_type": "profile", "mdf_detail": "true", "processor_details": "true"]
         )
 
         var request = URLRequest(url: url)
@@ -178,6 +197,8 @@ actor NMIService {
 
         // Log the response
         APILogger.logResponse(endpoint: queryURL, statusCode: httpResponse.statusCode, body: xmlString)
+        // Log full profile response for mdf_detail and processor_details debugging
+        APILogger.logProfileResponse(body: xmlString)
 
         guard httpResponse.statusCode == 200 else {
             throw NMIError.networkError("Server returned status \(httpResponse.statusCode)")
@@ -262,7 +283,9 @@ actor NMIService {
         var components = URLComponents(string: queryURL)!
         components.queryItems = [
             URLQueryItem(name: "security_key", value: securityKey),
-            URLQueryItem(name: "report_type", value: "profile")
+            URLQueryItem(name: "report_type", value: "profile"),
+            URLQueryItem(name: "mdf_detail", value: "true"),
+            URLQueryItem(name: "processor_details", value: "true")
         ]
 
         guard let url = components.url else {
@@ -273,7 +296,7 @@ actor NMIService {
         APILogger.logRequest(
             endpoint: queryURL,
             method: "GET",
-            parameters: ["security_key": securityKey, "report_type": "profile"]
+            parameters: ["security_key": securityKey, "report_type": "profile", "mdf_detail": "true", "processor_details": "true"]
         )
 
         var request = URLRequest(url: url)
@@ -298,6 +321,8 @@ actor NMIService {
 
         // Log the response
         APILogger.logResponse(endpoint: queryURL, statusCode: httpResponse.statusCode, body: xmlString)
+        // Log full profile response for mdf_detail and processor_details debugging
+        APILogger.logProfileResponse(body: xmlString)
 
         guard httpResponse.statusCode == 200 else {
             throw NMIError.networkError("Server returned status \(httpResponse.statusCode)")
@@ -329,6 +354,9 @@ actor NMIService {
                          extractValue(from: xml, tag: "zip") ?? ""
         let country = extractValue(from: xml, tag: "country") ?? "US"
 
+        // Parse merchant defined fields
+        let merchantDefinedFields = parseMerchantDefinedFields(from: xml)
+
         // Validate we got some meaningful data back
         if merchantId.isEmpty && companyName.isEmpty && firstName.isEmpty {
             throw NMIError.invalidCredentials
@@ -345,8 +373,77 @@ actor NMIService {
             city: city,
             state: state,
             postalCode: postalCode,
-            country: country
+            country: country,
+            merchantDefinedFields: merchantDefinedFields
         )
+    }
+
+    private func parseMerchantDefinedFields(from xml: String) -> [MerchantDefinedField] {
+        var fields: [MerchantDefinedField] = []
+
+        // Extract the merchant_defined_fields section
+        guard let mdfStart = xml.range(of: "<merchant_defined_fields>"),
+              let mdfEnd = xml.range(of: "</merchant_defined_fields>", range: mdfStart.upperBound..<xml.endIndex) else {
+            return fields
+        }
+
+        let mdfXml = String(xml[mdfStart.upperBound..<mdfEnd.lowerBound])
+
+        // Parse each field block - fields have format <field id="X">...</field>
+        let fieldPattern = "<field id=\"([^\"]+)\">"
+        guard let regex = try? NSRegularExpression(pattern: fieldPattern, options: []) else {
+            return fields
+        }
+
+        let matches = regex.matches(in: mdfXml, options: [], range: NSRange(mdfXml.startIndex..., in: mdfXml))
+
+        for match in matches {
+            guard let idRange = Range(match.range(at: 1), in: mdfXml),
+                  let matchRange = Range(match.range, in: mdfXml) else { continue }
+
+            let fieldId = String(mdfXml[idRange])
+            let startIndex = matchRange.upperBound
+
+            // Find the closing </field> tag
+            guard let endRange = mdfXml.range(of: "</field>", range: startIndex..<mdfXml.endIndex) else { continue }
+            let fieldXml = String(mdfXml[startIndex..<endRange.lowerBound])
+
+            // Extract field properties
+            let name = extractValue(from: fieldXml, tag: "name") ?? ""
+            let typeString = extractValue(from: fieldXml, tag: "type") ?? "text"
+            let type = MerchantDefinedFieldType(rawValue: typeString) ?? .text
+
+            // Extract all values (for select/radio types)
+            let values = extractAllValues(from: fieldXml, tag: "value")
+
+            let field = MerchantDefinedField(
+                id: fieldId,
+                name: name,
+                type: type,
+                values: values
+            )
+
+            fields.append(field)
+        }
+
+        return fields.sorted { (Int($0.id) ?? 0) < (Int($1.id) ?? 0) }
+    }
+
+    private func extractAllValues(from xml: String, tag: String) -> [String] {
+        var values: [String] = []
+        let openTag = "<\(tag)>"
+        let closeTag = "</\(tag)>"
+
+        var searchRange = xml.startIndex..<xml.endIndex
+
+        while let openRange = xml.range(of: openTag, range: searchRange),
+              let closeRange = xml.range(of: closeTag, range: openRange.upperBound..<xml.endIndex) {
+            let value = String(xml[openRange.upperBound..<closeRange.lowerBound])
+            values.append(value.trimmingCharacters(in: .whitespacesAndNewlines))
+            searchRange = closeRange.upperBound..<xml.endIndex
+        }
+
+        return values
     }
 
     // MARK: - Process Sale Transaction
@@ -376,6 +473,13 @@ actor NMIService {
         // Add tip if present
         if sale.tip > 0 {
             params["tip"] = String(format: "%.2f", sale.tip)
+        }
+
+        // Add merchant defined fields
+        for (fieldId, value) in sale.merchantDefinedFields {
+            if !value.isEmpty {
+                params["merchant_defined_field_\(fieldId)"] = value
+            }
         }
 
         components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
@@ -1064,6 +1168,13 @@ actor NMIService {
         // Add tip if present
         if sale.tip > 0 {
             params["tip"] = String(format: "%.2f", sale.tip)
+        }
+
+        // Add merchant defined fields
+        for (fieldId, value) in sale.merchantDefinedFields {
+            if !value.isEmpty {
+                params["merchant_defined_field_\(fieldId)"] = value
+            }
         }
 
         components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }

@@ -89,6 +89,9 @@ struct NewSaleView: View {
     @State private var showCustomerVault = false
     @State private var selectedVaultCustomer: VaultCustomer?
 
+    // Merchant defined fields state - Dictionary of field ID to value
+    @State private var merchantDefinedFieldValues: [String: String] = [:]
+
     private var amount: Double {
         Double(amountString) ?? 0
     }
@@ -560,6 +563,40 @@ struct NewSaleView: View {
                 }
             } header: {
                 Text("Billing Address")
+            }
+
+            // Merchant Defined Fields Section
+            if let profile = appState.merchantProfile,
+               !profile.activeMerchantDefinedFields.isEmpty {
+                Section {
+                    ForEach(profile.activeMerchantDefinedFields) { field in
+                        if field.hasOptions {
+                            // Dropdown for select/radio types
+                            Picker(field.name, selection: Binding(
+                                get: { merchantDefinedFieldValues[field.id] ?? "" },
+                                set: { merchantDefinedFieldValues[field.id] = $0 }
+                            )) {
+                                Text("Select...").tag("")
+                                ForEach(field.options, id: \.self) { option in
+                                    Text(option).tag(option)
+                                }
+                            }
+                        } else {
+                            // Text field for text type
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(field.name)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                TextField("", text: Binding(
+                                    get: { merchantDefinedFieldValues[field.id] ?? "" },
+                                    set: { merchantDefinedFieldValues[field.id] = $0 }
+                                ))
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Additional Information")
+                }
             }
 
             // Error Message
@@ -1209,7 +1246,8 @@ struct NewSaleView: View {
                     billingId: nil,
                     amount: amount,
                     tax: taxAmount,
-                    tip: tipAmount
+                    tip: tipAmount,
+                    merchantDefinedFields: merchantDefinedFieldValues
                 )
 
                 result = try await NMIService.shared.processVaultSale(
@@ -1233,7 +1271,8 @@ struct NewSaleView: View {
                     state: state,
                     postalCode: postalCode,
                     country: country,
-                    email: email
+                    email: email,
+                    merchantDefinedFields: merchantDefinedFieldValues
                 )
 
                 result = try await NMIService.shared.processSale(

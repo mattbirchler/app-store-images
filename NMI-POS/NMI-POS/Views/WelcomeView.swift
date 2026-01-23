@@ -129,7 +129,8 @@ struct ProfileRow: View {
                 city: "New York",
                 state: "NY",
                 postalCode: "10001",
-                country: "US"
+                country: "US",
+                merchantDefinedFields: []
             )
             return state
         }())

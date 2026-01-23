@@ -10,6 +10,8 @@ struct SettingsView: View {
     @State private var tipStrings: [String] = ["", "", ""]
     @State private var editingTipIndex: Int?
     @State private var appeared = false
+    @State private var pendingBiometricDisable = false
+    @State private var isAuthenticating = false
 
     var body: some View {
         NavigationStack {
@@ -447,14 +449,39 @@ struct SettingsView: View {
 
             Spacer()
 
-            Toggle("", isOn: Binding(
-                get: { appState.settings.biometricEnabled },
-                set: { appState.updateBiometricEnabled($0) }
-            ))
-            .labelsHidden()
-            .tint(.accentColor)
+            if isAuthenticating {
+                ProgressView()
+                    .scaleEffect(0.8)
+            } else {
+                Toggle("", isOn: Binding(
+                    get: { appState.settings.biometricEnabled },
+                    set: { newValue in
+                        if newValue {
+                            // Enabling - no auth required
+                            appState.updateBiometricEnabled(true)
+                        } else {
+                            // Disabling - require authentication first
+                            Task {
+                                await authenticateToDisableBiometrics()
+                            }
+                        }
+                    }
+                ))
+                .labelsHidden()
+                .tint(.accentColor)
+            }
         }
         .padding(16)
+    }
+
+    private func authenticateToDisableBiometrics() async {
+        isAuthenticating = true
+        let success = await appState.authenticateWithBiometrics()
+        isAuthenticating = false
+
+        if success {
+            appState.updateBiometricEnabled(false)
+        }
     }
 
     // MARK: - Currency Row
@@ -663,7 +690,8 @@ struct TipPercentageCard: View {
                 city: "New York",
                 state: "NY",
                 postalCode: "10001",
-                country: "US"
+                country: "US",
+                merchantDefinedFields: []
             )
             return state
         }())

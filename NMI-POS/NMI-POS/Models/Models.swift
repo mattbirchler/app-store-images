@@ -14,6 +14,7 @@ struct MerchantProfile: Codable, Equatable {
     let state: String
     let postalCode: String
     let country: String
+    let merchantDefinedFields: [MerchantDefinedField]
 
     var fullName: String {
         "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
@@ -21,6 +22,11 @@ struct MerchantProfile: Codable, Equatable {
 
     var displayName: String {
         companyName.isEmpty ? fullName : companyName
+    }
+
+    /// Fields that should be displayed on the sale form (non-empty names)
+    var activeMerchantDefinedFields: [MerchantDefinedField] {
+        merchantDefinedFields.filter { !$0.name.isEmpty && $0.name != "#" }
     }
 }
 
@@ -211,6 +217,7 @@ struct SaleRequest {
     let postalCode: String
     let country: String
     let email: String
+    let merchantDefinedFields: [String: String]  // Field ID -> Value
 
     var total: Double {
         amount + tax + tip
@@ -462,8 +469,38 @@ struct VaultSaleRequest {
     let amount: Double
     let tax: Double
     let tip: Double
+    let merchantDefinedFields: [String: String]  // Field ID -> Value
 
     var total: Double {
         amount + tax + tip
+    }
+}
+
+// MARK: - Merchant Defined Fields
+
+enum MerchantDefinedFieldType: String, Codable {
+    case text = "text"
+    case select = "select"
+    case radio = "radio"  // Displayed as dropdown in app
+
+    var isDropdown: Bool {
+        self == .select || self == .radio
+    }
+}
+
+struct MerchantDefinedField: Identifiable, Codable, Equatable {
+    let id: String           // Field ID from NMI (e.g., "1", "2")
+    let name: String         // Display name
+    let type: MerchantDefinedFieldType
+    let values: [String]     // Options for select/radio types
+
+    /// Returns non-empty values (filters out placeholder empty strings)
+    var options: [String] {
+        values.filter { !$0.isEmpty }
+    }
+
+    /// Whether this field has selectable options
+    var hasOptions: Bool {
+        type.isDropdown && !options.isEmpty
     }
 }

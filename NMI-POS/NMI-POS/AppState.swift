@@ -247,6 +247,8 @@ class AppState: ObservableObject {
         }
 
         switch context.biometryType {
+        case .none:
+            return .none
         case .faceID:
             return .faceID
         case .touchID:
@@ -320,6 +322,28 @@ class AppState: ObservableObject {
             }
         }
         currentScreen = .main
+    }
+
+    func lockApp() {
+        if settings.biometricEnabled {
+            currentScreen = .locked
+        }
+    }
+
+    // MARK: - Profile Refresh
+
+    /// Refresh merchant profile to get latest merchant defined fields
+    func refreshMerchantProfile() async {
+        guard let key = credentials?.securityKey, !key.isEmpty else { return }
+
+        do {
+            let profile = try await NMIService.shared.validateCredentialsAndGetProfile(securityKey: key)
+            merchantProfile = profile
+            saveMerchantProfile()
+        } catch {
+            // Silently fail - we still have the cached profile
+            // Log for debugging if needed
+        }
     }
 
     // MARK: - Helpers
